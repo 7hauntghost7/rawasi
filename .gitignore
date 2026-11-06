@@ -1,0 +1,10 @@
+# ملفات خاصة تبقى على الجهاز ولا تُنشر
+serve.py
+start.bat
+admin.html
+backups/
+live.json
+live.json.tmp
+concept.html
+firestore.rules
+__pycache__/

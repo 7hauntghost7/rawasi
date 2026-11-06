@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>مشرف المناظرة — صحيفة الرواسي</title>
+  <link rel="icon" href="assets/img/brand/logo-ar-gold.png">
+  <link rel="stylesheet" href="css/style.css?v=14">
+  <style>
+    body { padding-bottom: 40px; }
+    .top { position: sticky; top: 0; z-index: 10; background: rgba(250, 246, 238, .92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+    .top .wrap { display: flex; align-items: center; gap: 10px; min-height: 56px; }
+    .top img { height: 26px; width: auto; }
+    .top b { font-size: 14px; font-weight: 500; color: var(--ink-soft); flex: 1; }
+    .top a { font-size: 13px; color: var(--rust); }
+    .mod { max-width: 640px; margin: 0 auto; padding: 18px 0; display: flex; flex-direction: column; gap: 16px; }
+    .box { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 18px; }
+    .box h3 { font-size: 16px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+    .f { margin-bottom: 12px; }
+    .f label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+    .f input { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 0; box-shadow: inset 0 0 0 1.5px var(--line); background: var(--paper); }
+    .f input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--mustard); background: #fff; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn.red { background: #c2361a; color: #fff; }
+    .btn.red:hover { background: #a42c13; }
+    .big { width: 100%; justify-content: center; padding: 13px; font-size: 16px; }
+    .stat-row { display: flex; justify-content: space-between; font-size: 14px; margin-top: 8px; color: var(--ink-soft); }
+    .stat-row b { color: var(--ink); }
+    .cm { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .cm:last-child { border-bottom: 0; }
+    .cm .tx { flex: 1; min-width: 0; }
+    .cm .tx b { font-size: 13px; }
+    .cm .tx small { color: var(--ink-soft); font-size: 11.5px; margin-inline-start: 6px; }
+    .cm .tx p { margin: 2px 0 0; font-size: 14.5px; line-height: 1.7; word-break: break-word; }
+    .cm.off .tx { opacity: .4; text-decoration: line-through; }
+    .cm button { flex-shrink: 0; border: 0; border-radius: 10px; padding: 6px 12px; font-size: 13px; background: #f8d9ce; color: var(--rust); }
+    .cm.off button { background: #dcefd0; color: #3f6e22; }
+    .msgbox { text-align: center; padding: 30px 18px; }
+    .err { color: var(--rust); font-size: 14px; min-height: 20px; margin-top: 8px; text-align: center; }
+    .mode { font-size: 12px; color: var(--ink-soft); text-align: center; }
+  </style>
+</head>
+<body>
+  <header class="top"><div class="wrap">
+    <img src="assets/img/brand/logo-ar-dark.png" alt="">
+    <b>مشرف المناظرة</b>
+    <a href="munazarat.html#live-sec" target="_blank">صفحة الزوار ↗</a>
+  </div></header>
+  <main class="wrap mod" id="app"><div class="box msgbox">جارٍ الاتصال…</div></main>
+  <div class="toast" id="toast"></div>
+
+  <script src="js/data.js?v=14"></script>
+  <script src="js/firebase-config.js?v=14"></script>
+  <script src="js/live.js?v=14"></script>
+  <script>
+  (() => {
+    const $ = (s, r = document) => r.querySelector(s);
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const app = $("#app");
+    let tT;
+    const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(tT); tT = setTimeout(() => t.classList.remove("show"), 2600); };
+    const nice = (e) => { const m = (e && e.message) || ""; return /permission|insufficient/i.test(m) ? "لا تملك صلاحية — تأكد من بريد المشرف في قواعد Firestore" : /auth\//.test(m) ? "البريد أو كلمة المرور غير صحيحة" : m || "تعذّر الاتصال"; };
+    const upcoming = (typeof DEBATES_UPCOMING !== "undefined" ? DEBATES_UPCOMING : []);
+
+    LIVE.ready.then((be) => {
+      if (!be) {
+        app.innerHTML = `<div class="box msgbox"><h3 style="justify-content:center">المناظرة المباشرة غير مفعّلة</h3>
+          <p>للتجربة على الواي فاي: شغّل <b>start.bat</b> ثم افتح هذه الصفحة من رابطه.</p>
+          <p>ولتعمل للجميع من أي مكان: أكمل إعداد Firebase في <b dir="ltr">js/firebase-config.js</b>.</p></div>`;
+        return;
+      }
+      be.onAuth((ok) => (ok ? panel(be) : login(be)));
+    });
+
+    function login(be, err) {
+      app.innerHTML = `<div class="box" style="max-width:380px;margin:8vh auto 0;width:100%">
+        <h3 style="justify-content:center">دخول المشرف</h3>
+        <form id="lf">
+          ${be.needsEmail ? `<div class="f"><input id="em" type="email" dir="ltr" placeholder="البريد الإلكتروني" autocomplete="username"></div>` : ""}
+          <div class="f"><input id="pw" type="password" placeholder="كلمة المرور" autocomplete="current-password" style="text-align:center"></div>
+          <button class="btn gold big">دخول</button>
+        </form>
+        <div class="err">${esc(err || "")}</div>
+        <p class="mode">${be.mode === "firebase" ? "متصل بـ Firebase" : "وضع الشبكة المحلية (serve.py) — نفس كلمة مرور لوحة التحكم"}</p>
+      </div>`;
+      $("#lf").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try { await be.login(be.needsEmail ? $("#em").value.trim() : "", $("#pw").value); if (be.mode === "local") panel(be); }
+        catch (er) { login(be, nice(er)); }
+      });
+    }
+
+    let started = false;
+    function panel(be) {
+      if (started) return;
+      started = true;
+      let cur = null, tally = { a: 0, b: 0, claps: 0 }, comments = [], unT, unC;
+      app.innerHTML = `
+        <div class="box" id="state"></div>
+        <div class="box">
+          <h3>🔴 مناظرة جديدة</h3>
+          <form id="nf">
+            <div class="f"><label>موضوع المناظرة</label><input id="motion" list="mo" value="${esc((upcoming[0] || {}).motion || "")}"><datalist id="mo">${upcoming.map((d) => `<option value="${esc(d.motion)}">`).join("")}</datalist></div>
+            <div class="two">
+              <div class="f"><label>الطرف الأول</label><input id="sa" value="مؤيد" maxlength="30"></div>
+              <div class="f"><label>الطرف الثاني</label><input id="sb" value="معارض" maxlength="30"></div>
+            </div>
+            <button class="btn red big">ابدأ البث المباشر</button>
+          </form>
+        </div>
+        <div class="box"><h3 id="ch">💬 التعليقات</h3><div id="cms"></div></div>
+        <p class="mode">${be.mode === "firebase" ? "متصل بـ Firebase" : "وضع الشبكة المحلية"} · <a href="#" id="out" style="color:var(--rust)">خروج</a></p>`;
+
+      const paintState = () => {
+        const box = $("#state");
+        if (!cur) { box.innerHTML = `<h3>لا توجد مناظرة بعد</h3><p class="meta">ابدأ واحدة من الأسفل.</p>`; return; }
+        const live = cur.status === "live";
+        const a = tally.a || 0, b = tally.b || 0, t = a + b, pa = t ? Math.round((a / t) * 100) : 50;
+        box.innerHTML = `
+          <div class="live-top ${live ? "is-live" : ""}" style="margin-bottom:6px"><span class="live-pill">${live ? "<i></i> مباشر الآن" : "متوقفة"}</span><span class="meta">👏 ${tally.claps || 0}</span></div>
+          <h3 style="font-size:18px;line-height:1.6">«${esc(cur.motion)}»</h3>
+          <div class="tug"><div class="ta" style="width:${pa}%"><b>${t ? pa + "%" : ""}</b></div><div class="tb"><b>${t ? 100 - pa + "%" : ""}</b></div></div>
+          <div class="stat-row"><span>${esc(cur.sideA)}: <b>${a}</b></span><span>المجموع: <b>${t}</b></span><span>${esc(cur.sideB)}: <b>${b}</b></span></div>
+          <div class="btns" style="margin-top:14px">
+            ${live ? `<button class="btn big" data-st="closed">⏹ إنهاء التصويت والتعليقات</button>` : `<button class="btn gold big" data-st="live">▶ إعادة فتح التصويت</button>
+              <button class="btn ghost big" data-clear>إزالة المناظرة من الموقع</button>`}
+          </div>`;
+      };
+      const paintComments = () => {
+        $("#ch").textContent = `💬 التعليقات (${comments.length})`;
+        $("#cms").innerHTML = comments.length ? [...comments].reverse().map((c) => `
+          <div class="cm ${c.hidden ? "off" : ""}">
+            <div class="tx"><b>${esc(c.name)}</b><small>${c.side ? esc(c.side === "a" ? cur.sideA : cur.sideB) : ""}</small><p>${esc(c.text)}</p></div>
+            <button data-hide="${esc(c.id)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>
+          </div>`).join("") : `<p class="meta">لا توجد تعليقات بعد.</p>`;
+      };
+
+      be.watchDebate((d) => {
+        const changed = !cur || !d || cur.id !== d.id;
+        cur = d;
+        if (changed && d) {
+          if (unT) unT();
+          if (unC) unC();
+          unT = be.watchTally(d.id, (t) => { tally = t || tally; paintState(); });
+          unC = be.watchComments(d.id, (c) => { comments = c || []; paintComments(); });
+        }
+        paintState();
+        if (!d) paintComments();
+      });
+
+      app.addEventListener("click", async (e) => {
+        const st = e.target.closest("[data-st]");
+        if (st) {
+          if (st.dataset.st === "closed" && !confirm("إنهاء المناظرة؟ سيتوقف التصويت والتعليقات وتظهر النتيجة النهائية.")) return;
+          try { await be.setStatus(st.dataset.st); toast(st.dataset.st === "live" ? "عاد البث ▶" : "انتهت المناظرة ⏹"); } catch (er) { toast(nice(er)); }
+          return;
+        }
+        if (e.target.closest("[data-clear]")) {
+          if (!confirm("إزالة المناظرة من صفحة الزوار؟ تعود صفحة المناظرات إلى شكلها العادي.")) return;
+          try { await be.clear(); toast("أُزيلت المناظرة"); } catch (er) { toast(nice(er)); }
+          return;
+        }
+        const h = e.target.closest("[data-hide]");
+        if (h) { try { await be.hide(cur.id, h.dataset.hide, h.dataset.v === "1"); } catch (er) { toast(nice(er)); } return; }
+        if (e.target.id === "out") { e.preventDefault(); await be.logout(); location.reload(); }
+      });
+      $("#nf").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const motion = $("#motion").value.trim();
+        if (!motion) return toast("اكتب موضوع المناظرة");
+        if (cur && cur.status === "live" && !confirm("هناك مناظرة جارية. بدء مناظرة جديدة سيُنهيها. متابعة؟")) return;
+        try {
+          await be.start({ motion, sideA: $("#sa").value.trim() || "مؤيد", sideB: $("#sb").value.trim() || "معارض" });
+          toast("بدأ البث المباشر 🔴");
+          scrollTo({ top: 0, behavior: "smooth" });
+        } catch (er) { toast(nice(er)); }
+      });
+    }
+  })();
+  </script>
+</body>
+</html>
