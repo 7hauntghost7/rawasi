@@ -668,13 +668,21 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .rd-body a.btn { color: var(--gold); text-decoration: none; font-family: var(--f-ui); }
 
 /* ===== آية وتفسير ===== */
-.flip.tf, .flip.tf .in { min-height: 230px; }
-.flip.tf .f { background: #4a6b2a; color: #fff; text-align: center; align-items: center; }
-.flip.tf .ay { font-family: var(--f-poem); font-size: 25px; line-height: 1.9; margin: 0; }
-.flip.tf .f small { color: var(--gold); font-size: 13px; }
-.flip.tf .b { background: var(--card); color: var(--ink); }
-.flip.tf .b small { color: #4a6b2a; font-weight: 600; font-size: 13px; }
-.flip.tf .b span { font-family: var(--f-body); font-size: 21px; line-height: 1.55; font-weight: 500; }
+.tf-list { display: grid; gap: 10px; }
+@media (min-width: 900px) { .tf-list { grid-template-columns: 1fr 1fr; align-items: start; gap: 14px; } }
+.tf2 { background: #4a6b2a; color: #fff; border-radius: 20px; overflow: hidden; }
+.tf2 summary { list-style: none; cursor: pointer; padding: 20px 18px 14px; text-align: center; }
+.tf2 summary::-webkit-details-marker { display: none; }
+.tf2 .ay { font-family: var(--f-poem); font-size: 22px; line-height: 2.1; margin: 0; }
+.tf2 .ay mark { background: rgba(255, 204, 94, .22); color: var(--gold); border-radius: 6px; padding: 0 3px; }
+.tf2 summary small { display: inline-block; margin-top: 8px; color: var(--gold); font-size: 12.5px; font-weight: 600; }
+.tf2 summary small::after { content: " · اضغط للتفسير ▾"; color: rgba(255, 255, 255, .7); font-weight: 400; }
+.tf2[open] summary small::after { content: " · إخفاء ▴"; }
+.tf-body { background: var(--card); color: var(--ink); padding: 16px 18px 18px; }
+.tf-body small { display: block; color: #4a6b2a; font-weight: 600; font-size: 12.5px; margin-bottom: 4px; }
+.tf-body p { font-family: var(--f-body); font-size: 20px; line-height: 1.75; margin: 0 0 8px; white-space: pre-line; }
+.tf-body a { font-size: 13px; color: var(--rust); font-weight: 600; }
+.tf-src { margin-top: 10px; }
 
 /* ===== اختبر معاني الكلمات ===== */
 .aw { background: var(--card); border-radius: var(--radius); padding: 20px; max-width: 680px; }

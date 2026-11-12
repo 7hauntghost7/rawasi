@@ -656,15 +656,19 @@
 
   function tafsirSec() {
     if (!has("TAFSIR") || !TAFSIR.length) return "";
+    const hl = (t) => (t.focus && t.ayah.includes(t.focus) ? esc(t.ayah).replace(esc(t.focus), `<mark>${esc(t.focus)}</mark>`) : esc(t.ayah));
     return `<section class="section wrap">
       ${secHead("آية وتفسير")}
-      <p class="meta" style="margin-top:-8px">اضغط على البطاقة لتقرأ التفسير.</p>
-      <div class="grid g2">${TAFSIR.map((t) => `<div class="flip tf reveal" tabindex="0">
-        <div class="in">
-          <div class="f"><p class="ay">﴿${esc(t.ayah)}﴾</p><small>${esc(t.ref)}</small></div>
-          <div class="b"><small>المعنى</small><span>${esc(t.meaning)}</span></div>
+      <p class="meta" style="margin-top:-8px">اضغط على الآية لتقرأ تفسيرها.</p>
+      <div class="tf-list">${TAFSIR.map((t) => `<details class="tf2 reveal">
+        <summary><p class="ay">﴿${hl(t)}﴾</p><small>${esc(t.ref)}</small></summary>
+        <div class="tf-body">
+          <small>${esc(t.source || "التفسير")}${t.covers ? ` — ${esc(t.covers)}` : ""}</small>
+          <p>${esc(t.meaning)}</p>
+          ${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">المصدر ↗</a>` : ""}
         </div>
-      </div>`).join("")}</div>
+      </details>`).join("")}</div>
+      <p class="meta tf-src">التفسير منقول بنصّه من «التفسير الميسر» الصادر عن مجمع الملك فهد لطباعة المصحف الشريف، عبر موسوعة القرآن الكريم (QuranEnc.com).</p>
     </section>`;
   }
   const wordsSec = () => (has("AYAH_WORDS") && AYAH_WORDS.length ? `<section class="section wrap">
