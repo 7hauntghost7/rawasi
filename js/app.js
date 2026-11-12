@@ -203,6 +203,7 @@
   function closeModal(fromPop) {
     if (!isOpen()) return;
     $("#reader").classList.remove("open");
+    $("#reader .sheet").innerHTML = ""; // يوقف الفيديو وأي محتوى يعمل في الخلفية
     document.body.style.overflow = "";
     if (fromPop) return;
     if (history.state && (history.state.read || history.state.lb)) history.back();
