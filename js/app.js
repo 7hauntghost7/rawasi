@@ -191,7 +191,8 @@
   const isOpen = () => $("#reader").classList.contains("open");
   function openModal(html, light) {
     const m = $("#reader");
-    m.classList.toggle("lightbox", !!light);
+    m.classList.toggle("lightbox", light === true);
+    m.classList.toggle("embedm", light === "embed");
     $(".sheet", m).innerHTML = html;
     m.classList.add("open");
     m.scrollTop = 0;
@@ -438,6 +439,98 @@
     });
   }
 
+  /* ---------- فوائد، تفسير، معاني الكلمات ---------- */
+  const has = (n) => typeof window[n] !== "undefined" || (() => { try { return typeof eval(n) !== "undefined"; } catch { return false; } })();
+  const ytId = (u) => ((String(u || "").match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/) || [])[1]);
+  function fawaidSec(k, title) {
+    if (!has("FAWAID")) return "";
+    const list = FAWAID.map((f, i) => ({ f, i })).filter(({ f }) => f.club === k);
+    if (!list.length) return "";
+    return `<section class="section wrap">
+      ${secHead(title)}
+      <div class="fw-grid">${list.map(({ f, i }, n) => `<button type="button" class="fw t${n % 4} reveal" data-fw="${i}">
+        <span class="fw-k">${f.video ? "فيديو" : f.link ? "لقاء" : "فائدة"}</span>
+        <b>${esc(f.title)}</b>
+        <span class="fw-go">${f.video ? "شاهد ←" : "اقرأ ←"}</span>
+      </button>`).join("")}</div>
+    </section>`;
+  }
+  function openFawaid(i) {
+    const f = FAWAID[i];
+    if (!f) return;
+    const c = club(f.club), vid = ytId(f.video);
+    const linkLabel = /t\.me\//.test(f.link || "") ? "افتح اللقاء في تيليجرام" : "افتح الرابط";
+    if (!isOpen()) history.pushState({ lb: 1 }, "", location.href);
+    openModal(`<div class="rd-wrap" style="${tone(c)}">
+      <div class="rd-bar"><button class="rd-btn close" aria-label="رجوع">→</button><span class="rd-club">${c.name}</span></div>
+      <article class="rd">
+        <header class="rd-cover"><span class="bg">${glyph(f.club)}</span><div class="rd-in">
+          <div class="rd-kicker"><span>${f.club === "dini" ? "فوائد متفرقات" : "بين القرآن والعلم"}</span></div>
+          <h1>${esc(f.title)}</h1>
+        </div>${ridge("var(--paper)")}</header>
+        ${vid ? `<div class="fw-video"><iframe src="https://www.youtube-nocookie.com/embed/${vid}?rel=0" title="${esc(f.title)}" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ""}
+        <div class="rd-body">
+          ${(f.text || []).map((p) => para(p, c)).join("")}
+          ${f.link ? `<p><a class="btn" href="${esc(f.link)}" target="_blank" rel="noopener">${linkLabel}</a></p>` : ""}
+          <div class="rd-end" aria-hidden="true">✦</div>
+        </div>
+      </article></div>`);
+  }
+  function openEmbed(id) {
+    if (!isOpen()) history.pushState({ lb: 1 }, "", location.href);
+    openModal(`<div class="rd-wrap" style="--c:#101329;--on:#f1e5cc">
+      <div class="rd-bar"><button class="rd-btn close" aria-label="إغلاق">→</button><span class="rd-club">رسالة إليك</span></div>
+      <iframe class="embed-frame" src="assets/embeds/resala-ileik.html${id ? "#" + encodeURIComponent(id) : ""}" title="رسالة إليك"></iframe>
+    </div>`, "embed");
+  }
+  function tafsirSec() {
+    if (!has("TAFSIR") || !TAFSIR.length) return "";
+    return `<section class="section wrap">
+      ${secHead("آية وتفسير")}
+      <p class="meta" style="margin-top:-8px">اضغط على البطاقة لتقرأ التفسير.</p>
+      <div class="grid g2">${TAFSIR.map((t) => `<div class="flip tf reveal" tabindex="0">
+        <div class="in">
+          <div class="f"><p class="ay">﴿${esc(t.ayah)}﴾</p><small>${esc(t.ref)}</small></div>
+          <div class="b"><small>المعنى</small><span>${esc(t.meaning)}</span></div>
+        </div>
+      </div>`).join("")}</div>
+    </section>`;
+  }
+  const wordsSec = () => (has("AYAH_WORDS") && AYAH_WORDS.length ? `<section class="section wrap">
+      ${secHead("اختبر معاني الكلمات")}
+      <div class="aw" id="aw"></div>
+    </section>` : "");
+  function bindWords() {
+    const box = $("#aw");
+    if (!box) return;
+    let i = 0, score = 0;
+    const step = () => {
+      if (i >= AYAH_WORDS.length) {
+        box.innerHTML = `<div class="big-score"><div class="n">${score} / ${AYAH_WORDS.length}</div><p>${score === AYAH_WORDS.length ? "ما شاء الله، علامة كاملة!" : "أحسنت، وزد علمك بالرجوع للتفسير."}</p><button class="btn gold" data-aw="again">العب مرة أخرى</button></div>`;
+        return;
+      }
+      const q = AYAH_WORDS[i];
+      const ay = esc(q.ayah).replace(esc(q.word), `<mark>${esc(q.word)}</mark>`);
+      box.innerHTML = `<div class="hud"><span>${esc(q.ref)}</span><span>${i + 1} من ${AYAH_WORDS.length}</span><span>النقاط: <b>${score}</b></span></div>
+        <p class="aw-ayah">﴿${ay}﴾</p>
+        <p class="aw-q">ما معنى «${esc(q.word)}»؟</p>
+        <div class="choices">${q.options.map((o, j) => `<button type="button" class="choice" data-aw="${j}">${esc(o)}</button>`).join("")}</div>
+        <div class="hint" id="aw-next"></div>`;
+    };
+    box.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-aw]");
+      if (!b) return;
+      const v = b.dataset.aw;
+      if (v === "again") { i = 0; score = 0; return step(); }
+      if (v === "next") { i++; return step(); }
+      const q = AYAH_WORDS[i], ok = +v === q.answer;
+      $$(".choice", box).forEach((x) => { x.disabled = true; if (+x.dataset.aw === q.answer) x.classList.add("right"); });
+      if (ok) score++; else b.classList.add("wrong");
+      $("#aw-next").innerHTML = `${ok ? "أحسنت!" : "الإجابة الصحيحة باللون الأخضر."}<div style="margin-top:12px"><button class="btn" data-aw="next">${i + 1 < AYAH_WORDS.length ? "التالي ←" : "النتيجة"}</button></div>`;
+    });
+    step();
+  }
+
   /* ---------- إضافات خاصة بكل نادٍ ---------- */
   const EXTRAS = {
     adabi: () => `
@@ -457,6 +550,7 @@
       </section>`,
 
     ilmi: () => `
+      ${fawaidSec("ilmi", "بين القرآن والعلم")}
       <section class="section wrap">
         ${secHead("حقيقة أم خرافة؟")}
         <p class="meta" style="margin-top:-8px">اضغط على البطاقة لتكشف الإجابة.</p>
@@ -485,7 +579,18 @@
             <button class="btn ghost" id="bead-reset" style="margin-top:10px">تصفير</button>
           </div>
         </div>
-      </section>`;
+      </section>
+      <section class="section wrap" style="padding-top:0">
+        <button type="button" class="resala-card reveal" data-embed>
+          <small>من النادي الديني</small>
+          <b>رسالة إليك</b>
+          <span>في مكان ما بين هذه الأوراق، هناك رسالة كُتبت لك.</span>
+          <em>افتح الرسائل ←</em>
+        </button>
+      </section>
+      ${fawaidSec("dini", "فوائد متفرقات")}
+      ${tafsirSec()}
+      ${wordsSec()}`;
     },
 
     munazarat: () => `
@@ -837,6 +942,7 @@
   bindCarousel();
   bindRawasiyat();
   bindTasbeeh();
+  bindWords();
   bindPoll();
   bindGallery();
   observe();
@@ -858,6 +964,9 @@
     }
     const cp = t.closest("[data-copy]");
     if (cp) { copyText(location.origin + location.pathname + "#read-" + cp.dataset.copy).then(() => toast("تم نسخ الرابط ✔")); return; }
+    if (t.closest("[data-embed]")) { openEmbed(); return; }
+    const fw = t.closest("[data-fw]");
+    if (fw) { openFawaid(+fw.dataset.fw); return; }
     const flip = t.closest(".flip");
     if (flip) { flip.classList.toggle("on"); return; }
     const r = t.closest("[data-read]");
@@ -878,6 +987,11 @@
     const id = location.hash.slice(6);
     history.replaceState(null, "", location.pathname + location.search); // الرجوع يعيد إلى الصفحة
     openArticle(id);
+  }
+  else if (location.hash.startsWith("#resala-")) {
+    const id = decodeURIComponent(location.hash.slice(8));
+    history.replaceState(null, "", location.pathname + location.search);
+    openEmbed(id);
   }
   else if (location.hash.length > 1) { const el = document.getElementById(location.hash.slice(1)); if (el) setTimeout(() => el.scrollIntoView(), 60); }
 })();
