@@ -293,6 +293,7 @@
           ${a.poem ? poemBlock(a.poem) : ""}
           ${body.map((p) => para(p, c)).join("")}
           <div class="rd-end" aria-hidden="true">✦</div>
+          ${typeof CROSSWORD !== "undefined" && CROSSWORD.some((w) => w.article === a.id) ? `<a class="rd-cw" href="games.html#cw"><b>في المقال ده إجابة من «كلمات العدد»</b><span>جاوب ←</span></a>` : ""}
         </div>
         <div class="rd-share">
           <b>شاركها مع الدفعة</b>
@@ -404,8 +405,8 @@
       <div class="grid g3">${pens.slice(0, 3).map(penCard).join("")}</div>
     </section></div>
 
-    <section class="games-blk"><a class="in wrap" href="games.html">
-      <div><h2>ركن الألعاب</h2><p>كلمة اليوم، أكمل البيت، واختبر نفسك.</p></div>
+    <section class="games-blk"><a class="in wrap" href="games.html#cw">
+      <div><small>العدد ${SITE.issue}</small><h2>كلمات العدد</h2><p>كل الإجابات في مقالات العدد. قريتها؟</p></div>
       ${glyph("games")}
     </a></section>
 

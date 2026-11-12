@@ -172,8 +172,195 @@
     draw();
   }
 
+  /* ---------- كلمات العدد: كلمات متقاطعة إجاباتها في مقالات العدد ---------- */
+  let cwTimer = null;
+  function crossword() {
+    keyHandler = null;
+    clearInterval(cwTimer);
+    const list = typeof CROSSWORD !== "undefined" ? CROSSWORD : [];
+    const P = window.CW ? CW.build(list) : { words: [] };
+    if (!P.words.length) { stage.innerHTML = `<p class="meta" style="text-align:center;padding:40px 0">لا توجد كلمات لهذا العدد بعد.</p>`; return; }
+    const sig = P.words.map((w) => w.sol.join("")).join("|");
+    const skey = "cw:" + SITE.issue + ":" + [...sig].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+    let st = store.get(skey, null) || { v: {}, hints: 0, t0: 0, done: 0 };
+    const K = (r, c) => r + "," + c;
+    const cellsOf = (w) => w.sol.map((_, k) => K(w.r + (w.dir === "d" ? k : 0), w.c + (w.dir === "a" ? k : 0)));
+    const owners = {};
+    P.words.forEach((w, i) => cellsOf(w).forEach((kk) => (owners[kk] = owners[kk] || []).push(i)));
+    const firstOpen = P.words.findIndex((w) => cellsOf(w).some((kk) => !st.v[kk]));
+    let cur = { w: Math.max(0, firstOpen), k: 0 }, bad = new Set();
+    const save = () => store.set(skey, st);
+    const solved = (w) => cellsOf(w).every((kk) => st.v[kk] === P.cells[kk]);
+    const mmss = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+    const label = (w) => `${w.num} ${w.dir === "a" ? "أفقي" : "عمودي"}`;
+    const art = (w) => (typeof ARTICLES !== "undefined" ? ARTICLES.find((a) => a.id === w.article) : null);
+
+    const cellsHtml = Object.keys(P.cells).map((kk) => {
+      const [r, c] = kk.split(",").map(Number);
+      const n = P.words.find((w) => w.r === r && w.c === c);
+      return `<button type="button" class="cw-c" data-k="${kk}" style="grid-row:${r + 1};grid-column:${c + 1}" aria-label="خانة">${n ? `<i>${n.num}</i>` : ""}<span></span></button>`;
+    }).join("");
+    const listHtml = (dir) => P.words.map((w, i) => (w.dir === dir ? `<button type="button" class="cw-li" data-w="${i}"><b>${w.num}</b><span>${esc(w.clue)}</span></button>` : "")).join("");
+
+    stage.innerHTML = `
+      <div class="hud"><span>كلمات العدد ${SITE.issue}</span><span>الوقت: <b id="cw-time">0:00</b></span><span>تلميحات: <b id="cw-h">0</b></span></div>
+      <p class="meta cw-intro">كل الإجابات موجودة في مقالات هذا العدد. اضغط على أي خانة واكتب بلوحة مفاتيحك العربية.</p>
+      <div id="cw-win"></div>
+      <div class="cw-dock">
+        <div class="cw-clue" id="cw-clue"></div>
+        <input class="cw-in" id="cw-in" type="text" dir="rtl" lang="ar" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" aria-label="اكتب الحرف">
+      </div>
+      <div class="cw-grid" style="--n:${Math.max(P.cols, P.rows)};grid-template-columns:repeat(${P.cols},1fr)">${cellsHtml}</div>
+      <div class="cw-actions">
+        <button type="button" data-a="check">تحقّق</button>
+        <button type="button" data-a="hint">اكشف حرف</button>
+        <button type="button" data-a="reset">من جديد</button>
+      </div>
+      <div class="cw-lists">
+        <div><h3>أفقي</h3>${listHtml("a")}</div>
+        <div><h3>عمودي</h3>${listHtml("d")}</div>
+      </div>`;
+
+    function paint() {
+      const w = P.words[cur.w], on = new Set(cellsOf(w)), curK = cellsOf(w)[cur.k];
+      const okCells = new Set(P.words.filter(solved).flatMap(cellsOf));
+      stage.querySelectorAll(".cw-c").forEach((el) => {
+        const kk = el.dataset.k;
+        el.querySelector("span").textContent = st.v[kk] || "";
+        el.classList.toggle("on", on.has(kk));
+        el.classList.toggle("cur", kk === curK && !st.done);
+        el.classList.toggle("ok", okCells.has(kk));
+        el.classList.toggle("bad", bad.has(kk));
+      });
+      stage.querySelectorAll(".cw-li").forEach((el) => {
+        const i = +el.dataset.w;
+        el.classList.toggle("on", i === cur.w);
+        el.classList.toggle("done", solved(P.words[i]));
+      });
+      const a = art(w);
+      $("#cw-clue").innerHTML = `<div><b>${label(w)}</b>${esc(w.clue)}</div>${a ? `<button type="button" class="btn small" data-read="${esc(a.id)}">اقرأ المقال</button>` : ""}`;
+      $("#cw-h").textContent = st.hints;
+      tick();
+    }
+    function tick() {
+      const t = $("#cw-time");
+      if (!t) { clearInterval(cwTimer); return; }
+      t.textContent = mmss(st.t0 ? (st.done || Date.now()) - st.t0 : 0);
+    }
+    function finish() {
+      st.done = Date.now();
+      save();
+      confetti();
+      const time = mmss(st.done - st.t0);
+      const url = location.origin + location.pathname.replace(/[^/]*$/, "") + "games.html#cw";
+      const txt = `حلّيت «كلمات العدد ${SITE.issue}» في ${SITE.name} خلال ${time}${st.hints ? ` بـ ${st.hints} تلميح` : " بلا تلميحات"}. جرّب إنت:\n${url}`;
+      $("#cw-win").innerHTML = `<div class="cw-win"><h2>حلّيتها!</h2><p>الوقت ${time}، ${st.hints ? `بـ ${st.hints} تلميح` : "بلا تلميحات"}.</p>
+        <a class="btn gold" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">ورّي الدفعة في واتساب</a></div>`;
+      paint();
+    }
+    function input(ch) {
+      if (st.done) return;
+      if (!st.t0) st.t0 = Date.now();
+      const cells = cellsOf(P.words[cur.w]), kk = cells[cur.k];
+      st.v[kk] = ch;
+      bad.delete(kk);
+      if (cur.k < cells.length - 1) cur.k++;
+      save();
+      if (P.words.every(solved)) return finish();
+      paint();
+    }
+    function back() {
+      if (st.done) return;
+      const cells = cellsOf(P.words[cur.w]);
+      if (st.v[cells[cur.k]]) delete st.v[cells[cur.k]];
+      else if (cur.k > 0) { cur.k--; delete st.v[cells[cur.k]]; }
+      save();
+      paint();
+    }
+    function selectCell(kk) {
+      const ws = owners[kk] || [];
+      const curCells = cellsOf(P.words[cur.w]);
+      let wi;
+      if (ws.length > 1 && curCells[cur.k] === kk) wi = ws.find((i) => i !== cur.w);
+      else wi = ws.includes(cur.w) ? cur.w : (ws.find((i) => P.words[i].dir === P.words[cur.w].dir) ?? ws[0]);
+      cur = { w: wi, k: cellsOf(P.words[wi]).indexOf(kk) };
+      paint();
+    }
+
+    // حقل خفي يفتح لوحة مفاتيح الجوال. نترك فيه حرفًا غير مرئي حتى نلتقط زر المسح
+    const ZW = "\u200B", box = $("#cw-in");
+    let warned = false;
+    const arm = () => { box.value = ZW; try { box.setSelectionRange(1, 1); } catch { /* */ } };
+    const typeText = (txt) => {
+      for (const ch of txt.replace(/\u200B/g, "")) {
+        if (/[\u0621-\u064A]/.test(ch)) input(CW.norm(ch) || ch);
+        else if (/[a-z]/i.test(ch) && !warned) { warned = true; toast("حوّل لوحة المفاتيح للعربي"); }
+      }
+    };
+    const focusBox = () => { arm(); box.focus({ preventScroll: true }); };
+    box.addEventListener("input", (e) => {
+      if (e.isComposing) return;
+      if (!box.value.includes(ZW) && box.value === "") back();
+      else typeText(box.value);
+      arm();
+    });
+    box.addEventListener("compositionend", () => { typeText(box.value); arm(); });
+    box.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); nextWord(); } });
+    function nextWord() {
+      const n = P.words.findIndex((w, i) => i > cur.w && !solved(w));
+      const i = n >= 0 ? n : P.words.findIndex((w) => !solved(w));
+      if (i < 0) return;
+      cur = { w: i, k: Math.max(0, cellsOf(P.words[i]).findIndex((kk) => !st.v[kk])) };
+      paint();
+    }
+
+    stage.addEventListener("click", (e) => {
+      const c = e.target.closest(".cw-c");
+      if (c) { selectCell(c.dataset.k); return focusBox(); }
+      if (e.target.closest(".cw-clue") && !e.target.closest("[data-read]")) return focusBox();
+      const li = e.target.closest(".cw-li");
+      if (li) {
+        const w = P.words[+li.dataset.w], cells = cellsOf(w);
+        cur = { w: +li.dataset.w, k: Math.max(0, cells.findIndex((kk) => !st.v[kk])) };
+        paint();
+        stage.querySelector(".cw-grid").scrollIntoView({ behavior: "smooth", block: "center" });
+        return focusBox();
+      }
+      const a = e.target.closest("[data-a]");
+      if (!a) return;
+      if (a.dataset.a === "check") {
+        bad = new Set(Object.keys(st.v).filter((kk) => st.v[kk] !== P.cells[kk]));
+        toast(bad.size ? `في ${bad.size} ${bad.size > 2 && bad.size < 11 ? "حروف غلط" : "حرف غلط"}` : "كل الحروف المكتوبة صاح");
+        paint();
+      } else if (a.dataset.a === "hint") {
+        if (st.done) return;
+        const kk = cellsOf(P.words[cur.w])[cur.k];
+        if (st.v[kk] === P.cells[kk]) return toast("الحرف ده صاح أصلًا");
+        st.hints++;
+        input(P.cells[kk]);
+      } else if (a.dataset.a === "reset" && confirm("تبدأ من جديد؟ حيتمسح كل اللي كتبته.")) {
+        st = { v: {}, hints: 0, t0: 0, done: 0 };
+        bad = new Set();
+        cur = { w: 0, k: 0 };
+        save();
+        $("#cw-win").innerHTML = "";
+        paint();
+      }
+    });
+    keyHandler = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target === box) return;
+      if (e.key === "Backspace") { e.preventDefault(); back(); }
+      else if (e.key === "Enter") { e.preventDefault(); nextWord(); }
+      else if (e.key.length === 1 && /[ء-ي]/.test(e.key)) { e.preventDefault(); input(CW.norm(e.key) || e.key); }
+    };
+    cwTimer = setInterval(tick, 1000);
+    paint();
+    if (st.done) finish();
+  }
+
   /* ---------- القائمة ---------- */
   const GAMES = [
+    { id: "cw", e: "✦", name: "كلمات العدد", d: "إجاباتها في مقالات العدد", run: crossword },
     { id: "who", e: "؟", name: "خمّن منو؟", d: "زملاؤك وهم صغار", run: who },
     { id: "word", e: "ك", name: "كلمة الرواسي", d: "كلمة جديدة كل يوم", run: word },
     { id: "qul", e: "قل", name: "قل ولا تقل", d: "أيّ العبارتين أصح؟", run: qul },
