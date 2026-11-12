@@ -456,6 +456,16 @@
       </button>`).join("")}</div>
     </section>`;
   }
+  const fwUrl = (i) => location.origin + location.pathname + "#fw-" + i;
+  async function shareFawaid(i) {
+    const f = FAWAID[i];
+    if (!f) return;
+    try {
+      if (navigator.share) { await navigator.share({ title: f.title, text: f.title, url: fwUrl(i) }); return; }
+      await copyText(fwUrl(i));
+      toast("تم نسخ الرابط ✔");
+    } catch { /* أُلغيت */ }
+  }
   function openFawaid(i) {
     const f = FAWAID[i];
     if (!f) return;
@@ -474,6 +484,15 @@
           ${(f.text || []).map((p) => para(p, c)).join("")}
           ${f.link ? `<p><a class="btn" href="${esc(f.link)}" target="_blank" rel="noopener">${linkLabel}</a></p>` : ""}
           <div class="rd-end" aria-hidden="true">✦</div>
+        </div>
+        <div class="rd-share">
+          <b>شاركها مع الدفعة</b>
+          <div>
+            <a class="btn rd-wa" href="https://wa.me/?text=${encodeURIComponent(`${f.title}
+${SITE.name}
+${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
+            <button type="button" class="btn ghost" data-fwshare="${i}">مشاركة</button>
+          </div>
         </div>
       </article></div>`);
   }
@@ -654,6 +673,20 @@
     scatter();
   }
 
+  function newsSec() {
+    if (!has("NEWS_SCI") || !NEWS_SCI.length) return "";
+    return `<section class="section wrap">
+      ${secHead("ماذا يحدث في العالم؟")}
+      <p class="meta" style="margin-top:-8px">أبحاث جديدة، كل خبر بمصدره ونوع دراسته.</p>
+      <div class="nw-grid">${NEWS_SCI.map((n) => `<article class="nw reveal">
+        <span class="nw-tag">${esc(n.tag)}</span>
+        <h3>${esc(n.title)}</h3>
+        <p>${esc(n.summary)}</p>
+        ${n.kind ? `<p class="nw-kind">${esc(n.kind)}</p>` : ""}
+        <div class="nw-src"><span>${esc(n.source)}</span>${n.url ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">المصدر ↗</a>` : ""}</div>
+      </article>`).join("")}</div>
+    </section>`;
+  }
   function tafsirSec() {
     if (!has("TAFSIR") || !TAFSIR.length) return "";
     const hl = (t) => (t.focus && t.ayah.includes(t.focus) ? esc(t.ayah).replace(esc(t.focus), `<mark>${esc(t.focus)}</mark>`) : esc(t.ayah));
@@ -727,6 +760,7 @@
       </section>`,
 
     ilmi: () => `
+      ${newsSec()}
       ${fawaidSec("ilmi", "بين القرآن والعلم")}
       <section class="section wrap">
         ${secHead("حقيقة أم خرافة؟")}
@@ -1135,6 +1169,8 @@
     }
     const cp = t.closest("[data-copy]");
     if (cp) { copyText(location.origin + location.pathname + "#read-" + cp.dataset.copy).then(() => toast("تم نسخ الرابط ✔")); return; }
+    const fws = t.closest("[data-fwshare]");
+    if (fws) { shareFawaid(+fws.dataset.fwshare); return; }
     const fw = t.closest("[data-fw]");
     if (fw) { openFawaid(+fw.dataset.fw); return; }
     const flip = t.closest(".flip");
@@ -1157,6 +1193,11 @@
     const id = location.hash.slice(6);
     history.replaceState(null, "", location.pathname + location.search); // الرجوع يعيد إلى الصفحة
     openArticle(id);
+  }
+  else if (/^#fw-\d+$/.test(location.hash)) {
+    const n = +location.hash.slice(4);
+    history.replaceState(null, "", location.pathname + location.search);
+    openFawaid(n);
   }
   else if (location.hash.startsWith("#resala-") && rlOpenById) {
     const id = decodeURIComponent(location.hash.slice(8));

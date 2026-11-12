@@ -743,3 +743,14 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .rl-acts { position: relative; display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
 .rl-acts button { border: 1px solid #b5a17f; background: #fff8ed; color: #65553f; border-radius: 30px; padding: 8px 14px; font-size: 13px; }
 .rl-sign { text-align: left; color: #8b7657; font-family: var(--f-poem); font-style: italic; font-size: 17px; margin: 18px 0 0; }
+
+/* ===== ماذا يحدث في العالم؟ ===== */
+.nw-grid { display: grid; gap: 12px; }
+@media (min-width: 760px) { .nw-grid { grid-template-columns: 1fr 1fr; gap: 16px; } }
+.nw { background: var(--card); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 6px; border-top: 5px solid var(--teal); }
+.nw-tag { align-self: flex-start; background: var(--teal); color: #fff; font-size: 12px; font-weight: 600; padding: 2px 12px; border-radius: 999px; }
+.nw h3 { font-size: 24px; line-height: 1.4; margin: 4px 0 0; color: var(--ink); }
+.nw p { margin: 0; font-size: 15px; line-height: 1.75; }
+.nw .nw-kind { font-size: 12.5px; font-weight: 600; color: var(--brick); background: var(--paper); border-radius: 10px; padding: 5px 10px; }
+.nw-src { margin-top: auto; padding-top: 8px; border-top: 1.5px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink-soft); }
+.nw-src a { flex-shrink: 0; color: var(--rust); font-weight: 600; }
