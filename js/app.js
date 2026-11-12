@@ -701,7 +701,9 @@
       const q = AYAH_WORDS[i], ok = +v === q.answer;
       $$(".choice", box).forEach((x) => { x.disabled = true; if (+x.dataset.aw === q.answer) x.classList.add("right"); });
       if (ok) score++; else b.classList.add("wrong");
-      $("#aw-next").innerHTML = `${ok ? "أحسنت!" : "الإجابة الصحيحة باللون الأخضر."}<div style="margin-top:12px"><button class="btn" data-aw="next">${i + 1 < AYAH_WORDS.length ? "التالي ←" : "النتيجة"}</button></div>`;
+      $("#aw-next").innerHTML = `${ok ? "أحسنت!" : "الإجابة الصحيحة باللون الأخضر."}
+        ${q.explain ? `<p class="aw-exp"><small>${esc(q.source || "التفسير")}${q.url ? ` · <a href="${esc(q.url)}" target="_blank" rel="noopener">المصدر ↗</a>` : ""}</small>«${esc(q.explain)}»</p>` : ""}
+        <div style="margin-top:12px"><button class="btn" data-aw="next">${i + 1 < AYAH_WORDS.length ? "التالي ←" : "النتيجة"}</button></div>`;
     });
     step();
   }
