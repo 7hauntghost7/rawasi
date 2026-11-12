@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex">
   <title>مشرف المناظرة — صحيفة الرواسي</title>
   <link rel="icon" href="assets/img/brand/logo-ar-gold.png">
-  <link rel="stylesheet" href="css/style.css?v=34">
+  <link rel="stylesheet" href="css/style.css?v=36">
   <style>
     body { padding-bottom: 40px; }
     .top { position: sticky; top: 0; z-index: 10; background: rgba(250, 246, 238, .92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
@@ -40,6 +40,10 @@
     .msgbox { text-align: center; padding: 30px 18px; }
     .err { color: var(--rust); font-size: 14px; min-height: 20px; margin-top: 8px; text-align: center; }
     .mode { font-size: 12px; color: var(--ink-soft); text-align: center; }
+    .img-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .img-pick .btn, .btns label.btn { cursor: pointer; }
+    #dimg-prev { width: 120px; height: 80px; object-fit: cover; border-radius: 12px; }
+    .st-img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 16px; margin: 4px 0 10px; }
   </style>
 </head>
 <body>
@@ -51,9 +55,9 @@
   <main class="wrap mod" id="app"><div class="box msgbox">جارٍ الاتصال…</div></main>
   <div class="toast" id="toast"></div>
 
-  <script src="js/data.js?v=34"></script>
-  <script src="js/firebase-config.js?v=34"></script>
-  <script src="js/live.js?v=34"></script>
+  <script src="js/data.js?v=36"></script>
+  <script src="js/firebase-config.js?v=36"></script>
+  <script src="js/live.js?v=36"></script>
   <script>
   (() => {
     const $ = (s, r = document) => r.querySelector(s);
@@ -107,6 +111,12 @@
               <div class="f"><label>الطرف الأول</label><input id="sa" value="مؤيد" maxlength="30"></div>
               <div class="f"><label>الطرف الثاني</label><input id="sb" value="معارض" maxlength="30"></div>
             </div>
+            <div class="f"><label>صورة المناظرة (اختياري)</label>
+              <div class="img-pick">
+                <label class="btn ghost">📷 اختر صورة<input type="file" accept="image/*" hidden id="dimg"></label>
+                <img id="dimg-prev" alt="" hidden><button type="button" class="btn ghost" id="dimg-x" hidden>إزالة</button>
+              </div>
+            </div>
             <button class="btn red big">ابدأ البث المباشر</button>
           </form>
         </div>
@@ -121,10 +131,15 @@
         const a = tally.a || 0, b = tally.b || 0, t = a + b, pa = t ? Math.round((a / t) * 100) : 50;
         box.innerHTML = `
           <div class="live-top ${live ? "is-live" : ""}" style="margin-bottom:6px"><span class="live-pill">${live ? "<i></i> مباشر الآن" : "متوقفة"}</span><span class="meta">👏 ${tally.claps || 0}</span></div>
+          ${cur.img ? `<img class="st-img" src="${/^data:image\//.test(cur.img) ? cur.img : ""}" alt="">` : ""}
           <h3 style="font-size:18px;line-height:1.6">«${esc(cur.motion)}»</h3>
           <div class="tug"><div class="ta" style="width:${pa}%"><b>${t ? pa + "%" : ""}</b></div><div class="tb"><b>${t ? 100 - pa + "%" : ""}</b></div></div>
           <div class="stat-row"><span>${esc(cur.sideA)}: <b>${a}</b></span><span>المجموع: <b>${t}</b></span><span>${esc(cur.sideB)}: <b>${b}</b></span></div>
-          <div class="btns" style="margin-top:14px">
+          <div class="btns" style="margin-top:12px">
+            <label class="btn ghost">📷 ${cur.img ? "تغيير الصورة" : "أضف صورة"}<input type="file" accept="image/*" hidden id="simg"></label>
+            ${cur.img ? `<button class="btn ghost" data-noimg>إزالة الصورة</button>` : ""}
+          </div>
+          <div class="btns" style="margin-top:10px">
             ${live ? `<button class="btn big" data-st="closed">⏹ إنهاء التصويت والتعليقات</button>` : `<button class="btn gold big" data-st="live">▶ إعادة فتح التصويت</button>
               <button class="btn ghost big" data-clear>إزالة المناظرة من الموقع</button>`}
           </div>`;
@@ -169,6 +184,10 @@
           try { await be.setStatus(st.dataset.st); toast(st.dataset.st === "live" ? "عاد البث ▶" : "انتهت المناظرة ⏹"); } catch (er) { toast(nice(er)); }
           return;
         }
+        if (e.target.closest("[data-noimg]")) {
+          try { await be.setImage(""); toast("أُزيلت الصورة"); } catch (er) { toast(nice(er)); }
+          return;
+        }
         if (e.target.closest("[data-clear]")) {
           if (!confirm("إزالة المناظرة من صفحة الزوار؟ تعود صفحة المناظرات إلى شكلها العادي.")) return;
           try { await be.clear(); toast("أُزيلت المناظرة"); } catch (er) { toast(nice(er)); }
@@ -180,14 +199,40 @@
         if (h) { try { await be.hide(cur.id, h.dataset.hide, h.dataset.v === "1"); } catch (er) { toast(nice(er)); } return; }
         if (e.target.id === "out") { e.preventDefault(); await be.logout(); location.reload(); }
       });
+      // تصغير الصورة في المتصفح (≈100 ك.ب) لتُحفظ داخل سجل المناظرة مجانًا
+      const shrink = (file) => new Promise((res, rej) => {
+        const im = new Image();
+        im.onload = () => {
+          const sc = Math.min(1, 1000 / Math.max(im.naturalWidth, im.naturalHeight));
+          const c = document.createElement("canvas");
+          c.width = Math.round(im.naturalWidth * sc); c.height = Math.round(im.naturalHeight * sc);
+          const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
+          let q = .8, out = c.toDataURL("image/jpeg", q);
+          while (out.length > 700000 && q > .4) { q -= .1; out = c.toDataURL("image/jpeg", q); }
+          res(out);
+        };
+        im.onerror = () => rej(new Error("تعذّرت قراءة الصورة"));
+        im.src = URL.createObjectURL(file);
+      });
+      let picked = "";
+      app.addEventListener("change", async (e) => {
+        if (e.target.id === "dimg" && e.target.files[0]) {
+          try { picked = await shrink(e.target.files[0]); $("#dimg-prev").src = picked; $("#dimg-prev").hidden = false; $("#dimg-x").hidden = false; } catch (er) { toast(er.message); }
+        }
+        if (e.target.id === "simg" && e.target.files[0]) {
+          try { toast("جارٍ رفع الصورة…"); await be.setImage(await shrink(e.target.files[0])); toast("تم تحديث الصورة ✔"); } catch (er) { toast(nice(er)); }
+        }
+      });
+      app.addEventListener("click", (e) => { if (e.target.id === "dimg-x") { picked = ""; $("#dimg-prev").hidden = true; $("#dimg-x").hidden = true; $("#dimg").value = ""; } });
       $("#nf").addEventListener("submit", async (e) => {
         e.preventDefault();
         const motion = $("#motion").value.trim();
         if (!motion) return toast("اكتب موضوع المناظرة");
         if (cur && cur.status === "live" && !confirm("هناك مناظرة جارية. بدء مناظرة جديدة سيُنهيها. متابعة؟")) return;
         try {
-          await be.start({ motion, sideA: $("#sa").value.trim() || "مؤيد", sideB: $("#sb").value.trim() || "معارض" });
+          await be.start({ motion, sideA: $("#sa").value.trim() || "مؤيد", sideB: $("#sb").value.trim() || "معارض", img: picked });
           toast("بدأ البث المباشر 🔴");
+          picked = ""; $("#dimg-prev").hidden = true; $("#dimg-x").hidden = true;
           scrollTo({ top: 0, behavior: "smooth" });
         } catch (er) { toast(nice(er)); }
       });

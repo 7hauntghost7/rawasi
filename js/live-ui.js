@@ -101,7 +101,8 @@
           el.href = "munazarat.html#live-sec";
           $("#main").prepend(el);
         }
-        el.innerHTML = `<span class="live-dot"></span><span class="tx"><b>مناظرة مباشرة الآن</b><span>«${esc(cur.motion)}»</span></span><span class="go">صوّت ←</span>`;
+        const bimg = /^data:image\/(jpeg|png|webp);base64,/.test(cur.img || "") ? cur.img : "";
+        el.innerHTML = `${bimg ? `<img class="lb-img" src="${bimg}" alt="">` : `<span class="live-dot"></span>`}<span class="tx"><b>مناظرة مباشرة الآن</b><span>«${esc(cur.motion)}»</span></span><span class="go">صوّت ←</span>`;
       } else if (el) { el.remove(); el = null; }
     });
   }
@@ -123,7 +124,7 @@
       if (oldPoll) oldPoll.hidden = true;
       sec.hidden = false;
       const newDebate = !cur || cur.id !== d.id;
-      const newSig = [d.id, d.status, d.motion, d.sideA, d.sideB].join("|");
+      const newSig = [d.id, d.status, d.motion, d.sideA, d.sideB, (d.img || "").length, (d.img || "").slice(-40)].join("|");
       cur = d;
       if (newDebate) {
         if (unT) unT();
@@ -150,28 +151,35 @@
       </form>`;
     }
 
+    const safeImg = (src) => (/^data:image\/(jpeg|png|webp);base64,/.test(src || "") ? src : "");
     function render() {
-      const live = cur.status === "live";
+      const live = cur.status === "live", img = safeImg(cur.img);
       sec.innerHTML = `
-        <div class="live ${live ? "is-live" : "is-closed"}">
-          <div class="live-top">
-            <span class="live-pill">${live ? "<i></i> مباشر الآن" : "انتهت المناظرة"}</span>
-            <span class="meta" id="lv-count"></span>
-          </div>
-          <h2 class="live-motion">«${esc(cur.motion)}»</h2>
-          <div class="tug" aria-hidden="true"><div class="ta" id="ta"><b id="pa"></b></div><div class="tb"><b id="pb"></b></div></div>
-          <div class="vote-btns">
-            <button class="vb a" data-v="a" ${live ? "" : "disabled"}><span>${esc(cur.sideA)}</span><small id="na"></small></button>
-            <button class="vb b" data-v="b" ${live ? "" : "disabled"}><span>${esc(cur.sideB)}</span><small id="nb"></small></button>
-          </div>
-          <p class="live-hint" id="lv-hint"></p>
-          <div class="chat">
-            <div class="chat-head">
-              <b>التعليقات</b>
-              <button class="clap" id="clap" ${live ? "" : "disabled"} aria-label="تصفيق">👏 <span id="nclap">0</span></button>
+        <div class="lv ${live ? "is-live" : "is-closed"}">
+          <div class="lv-cover ${img ? "has-img" : ""}">
+            ${img ? `<img src="${img}" alt="">` : ""}
+            <div class="lv-over">
+              <span class="live-pill">${live ? "<i></i> مباشر الآن" : "انتهت المناظرة"}</span>
+              <h2 class="live-motion">«${esc(cur.motion)}»</h2>
+              <span class="lv-count" id="lv-count"></span>
             </div>
-            <div class="chat-list" id="chat" aria-live="polite"></div>
-            ${live ? formHtml() : `<p class="meta" style="text-align:center;margin:10px 0 0">أُغلقت التعليقات</p>`}
+          </div>
+          <div class="lv-body">
+            <div class="lv-sides"><span class="sa">${esc(cur.sideA)}</span><span class="sb">${esc(cur.sideB)}</span></div>
+            <div class="tug" aria-hidden="true"><div class="ta" id="ta"><b id="pa"></b></div><div class="tb"><b id="pb"></b></div></div>
+            <div class="vote-btns">
+              <button class="vb a" data-v="a" ${live ? "" : "disabled"}><span>${esc(cur.sideA)}</span><small id="na"></small></button>
+              <button class="vb b" data-v="b" ${live ? "" : "disabled"}><span>${esc(cur.sideB)}</span><small id="nb"></small></button>
+            </div>
+            <p class="live-hint" id="lv-hint"></p>
+            <div class="chat">
+              <div class="chat-head">
+                <b>التعليقات</b>
+                <button class="clap" id="clap" ${live ? "" : "disabled"} aria-label="تصفيق">👏 <span id="nclap">0</span></button>
+              </div>
+              <div class="chat-list" id="chat" aria-live="polite"></div>
+              ${live ? formHtml() : `<p class="meta" style="text-align:center;margin:10px 0 0">أُغلقت التعليقات</p>`}
+            </div>
           </div>
         </div>`;
       paintTally();

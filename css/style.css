@@ -32,6 +32,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 body {
   margin: 0; background: var(--paper); color: var(--ink);
@@ -804,3 +805,26 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .mm-b h3 { font-size: 23px; margin: 0; }
 .mm-b small { color: var(--ink-soft); font-size: 12.5px; }
 .mm-b p { margin: 6px 0 0; font-size: 15px; line-height: 1.75; }
+
+/* ===== المناظرة المباشرة: الغلاف والتصميم الجديد ===== */
+.lv { max-width: 760px; margin: 0 auto; border-radius: 26px; overflow: hidden; background: var(--card); }
+.lv-cover { position: relative; min-height: 210px; display: flex; align-items: flex-end; color: #fff;
+  background: radial-gradient(ellipse at 80% 10%, rgba(233, 171, 17, .35), transparent 55%), linear-gradient(150deg, var(--brick), var(--deep)); }
+.lv-cover.has-img { min-height: 300px; background: var(--deep); }
+@media (min-width: 760px) { .lv-cover.has-img { min-height: 380px; } }
+.lv-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lv-over { position: relative; width: 100%; padding: 22px 18px 16px; }
+.lv-cover.has-img .lv-over { background: linear-gradient(to top, rgba(30, 12, 6, .94), rgba(30, 12, 6, .6) 60%, transparent); padding-top: 60px; }
+.lv .live-motion { color: #fff; font-size: clamp(28px, 7.6vw, 42px); line-height: 1.4; margin: 10px 0 2px; }
+.lv-count { font-size: 13px; opacity: .85; }
+.lv.is-closed .live-pill { background: rgba(255, 255, 255, .18); color: #fff; }
+.lv-body { padding: 18px; }
+@media (min-width: 760px) { .lv-body { padding: 24px 28px; } }
+.lv-sides { display: flex; justify-content: space-between; gap: 10px; font-family: var(--f-head); font-size: 20px; margin-bottom: 6px; }
+.lv-sides .sa { color: var(--teal); }
+.lv-sides .sb { color: var(--rust); }
+.lv .tug { height: 56px; border-radius: 18px; }
+.lv .tug b { font-family: var(--f-head); font-weight: 400; font-size: 26px; }
+.lv .vb { padding: 16px 8px; font-size: 18px; border-radius: 18px; }
+.lv .chat { margin-top: 18px; }
+.live-banner .lb-img { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }

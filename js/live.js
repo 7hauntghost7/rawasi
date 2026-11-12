@@ -58,12 +58,13 @@
       login: (email, pass) => au.signInWithEmailAndPassword(auth, email, pass),
       logout: () => au.signOut(auth),
       onAuth: (cb) => au.onAuthStateChanged(auth, (u) => cb(!!u)),
-      async start({ motion, sideA, sideB }) {
+      async start({ motion, sideA, sideB, img }) {
         const id = "d" + Date.now().toString(36);
         await setDoc(deb(id), { a: 0, b: 0, claps: 0 });
-        await setDoc(cur, { id, motion, sideA, sideB, status: "live", started: serverTimestamp() });
+        await setDoc(cur, { id, motion, sideA, sideB, img: img || "", status: "live", started: serverTimestamp() });
       },
       setStatus: (status) => updateDoc(cur, { status }),
+      setImage: (img) => updateDoc(cur, { img: img || "" }),
       clear: () => deleteDoc(cur),
       hide: (id, cid, hidden) => updateDoc(doc(db, "debates", id, "comments", cid), { hidden }),
       // تعليقات على شخصية العدد
@@ -120,6 +121,7 @@
       onAuth(cb) { if (!pass) return cb(false); admin("ping").then(() => cb(true), () => cb(false)); },
       start: (o) => admin("start", o),
       setStatus: (status) => admin("status", { status }),
+      setImage: (img) => admin("image", { img: img || "" }),
       clear: () => admin("clear"),
       hide: (id, cid, hidden) => admin("hide", { cid, hidden }),
       watchThread(tid, cb) {
