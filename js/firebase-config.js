@@ -13,7 +13,14 @@
       ← انسخ كائن firebaseConfig والصقه مكان null بالأسفل.
    ========================================================= */
 
-window.RAWASI_FIREBASE = null;
+window.RAWASI_FIREBASE = {
+  apiKey: "AIzaSyDMz8ONRAXihcg0cNAmOk0Zk4XEicYNKa8",
+  authDomain: "rawasi101.firebaseapp.com",
+  projectId: "rawasi101",
+  storageBucket: "rawasi101.firebasestorage.app",
+  messagingSenderId: "573407299761",
+  appId: "1:573407299761:web:8bd29dfbfd1f6e625aba90"
+};
 
 /* مثال على الشكل بعد اللصق:
 window.RAWASI_FIREBASE = {
