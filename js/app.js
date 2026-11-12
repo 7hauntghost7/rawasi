@@ -879,6 +879,65 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
       </section>`;
   }
 
+  /* ---------- شخصية العدد ---------- */
+  function personaSec() {
+    if (!has("PERSONA") || !PERSONA || !(PERSONA.text || []).length) return "";
+    const p = PERSONA;
+    return `<section class="rw ps"><div class="rw-in">
+      <div class="ps-top"><div class="ps-q">؟</div><div><p class="rw-eye">شخصية العدد ${esc(p.issue)}</p><h2>منو ده؟</h2></div></div>
+      <div class="ps-text">${p.text.map((t) => `<p>${esc(t)}</p>`).join("")}</div>
+      ${(p.clues || []).length ? `<div class="ps-clues">${p.clues.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
+      <p class="ps-note">عرفته؟ خلّيها سر.</p>
+    </div></section>`;
+  }
+
+  /* ---------- يحدث قريبًا ---------- */
+  function upcomingSec() {
+    if (!has("UPCOMING")) return "";
+    const day0 = new Date(); day0.setHours(12, 0, 0, 0);
+    const list = UPCOMING.map((e) => ({ e, n: Math.round((new Date(e.date + "T12:00:00") - day0) / 864e5) }))
+      .filter(({ n }) => n >= 0).sort((x, y) => x.n - y.n);
+    const when = (n) => (n === 0 ? "اليوم" : n === 1 ? "بكرة" : n === 2 ? "بعد يومين" : n <= 10 ? `بعد ${n} أيام` : `بعد ${n} يومًا`);
+    return `<section class="rw up"><div class="rw-in">
+      <p class="rw-eye">لا يفوتك</p>
+      <h2>يحدث قريبًا</h2>
+      ${list.length ? `<div class="up-list">${list.map(({ e, n }) => {
+        const dt = new Date(e.date + "T12:00:00");
+        return `<div class="up-i">
+          <div class="up-d"><b>${dt.toLocaleDateString("ar-SD-u-nu-latn", { day: "numeric" })}</b><small>${dt.toLocaleDateString("ar-SD-u-nu-latn", { month: "long" })}</small></div>
+          <div class="up-t"><b>${esc(e.title)}</b><small>${[e.time, e.place].filter(Boolean).map(esc).join(" ✦ ")}</small></div>
+          <span class="up-c ${n === 0 ? "now" : ""}">${when(n)}</span>
+        </div>`;
+      }).join("")}</div>` : `<p class="up-empty">ما في فعاليات معلنة حاليًا — تابعونا.</p>`}
+    </div></section>`;
+  }
+
+  /* ---------- ذكريات الدفعة ---------- */
+  function memoriesSec() {
+    if (!has("MEMORIES") || !MEMORIES.length) return "";
+    const issues = [...new Set(MEMORIES.map((m) => +m.issue || 0))].sort((x, y) => y - x);
+    return `<section class="rw mm"><div class="rw-in">
+      <p class="rw-eye">الأرشيف</p>
+      <h2>ذكريات الدفعة</h2>
+      ${issues.map((iss) => `<h3 class="mm-issue">العدد ${iss}</h3>
+        ${MEMORIES.map((m, i) => ({ m, i })).filter(({ m }) => (+m.issue || 0) === iss).sort((x, y) => String(y.m.date).localeCompare(String(x.m.date))).map(({ m, i }) => {
+          const c = club(m.club), ph = [m.img1, m.img2, m.img3].filter(Boolean);
+          return `<article class="mm-card reveal">
+            <div class="mm-ph ${ph.length > 1 ? "" : "one"}" style="${tone(c)}">${ph.length
+              ? ph.map((src, k) => `<button type="button" data-mem="${i}" data-k="${k}" aria-label="افتح الصورة"><img src="${esc(src)}" alt="" loading="lazy"></button>`).join("")
+              : `<div class="mm-none">${glyph(m.club)}</div>`}</div>
+            <div class="mm-b"><h3>${esc(m.title)}</h3><small>${c.name} ✦ ${fmt(m.date)}</small>${m.text ? `<p>${esc(m.text)}</p>` : ""}</div>
+          </article>`;
+        }).join("")}`).join("")}
+    </div></section>`;
+  }
+  function openMemoryPhoto(i, k) {
+    const m = MEMORIES[i], src = m && [m.img1, m.img2, m.img3].filter(Boolean)[k];
+    if (!src) return;
+    if (!isOpen()) history.pushState({ lb: 1 }, "", location.href);
+    openModal(`<div class="rd-bar"><button class="rd-btn close" aria-label="إغلاق">→</button><span class="rd-club">${esc(m.title)}</span></div><img class="canvas" src="${esc(src)}" alt=""><div class="content"><h2>${esc(m.title)}</h2><div class="meta" style="color:var(--sand)">${fmt(m.date)}</div></div>`, true);
+  }
+
   function rawasiyatPage() {
     const g = weeklyGuess();
     const tones = ["a", "b", "c"];
@@ -897,11 +956,16 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
         <div class="rw-swipe">${SAID.map((s, i) => `<div class="rw-q ${tones[i % 3]}"><p>«${esc(s.q)}»</p><small>${esc(s.by)}</small></div>`).join("")}</div>
       </section>` : ""}
 
+      ${personaSec()}
+      ${upcomingSec()}
+
       <section class="rw rw-ask"><div class="rw-in" id="rw-ask">
         <p class="rw-eye">سؤال الدفعة</p>
         <h2>${esc(ASK.question)}</h2>
         ${ASK.options.map((o, i) => `<button type="button" class="rw-opt" data-i="${i}">${esc(o)}</button>`).join("")}
       </div></section>
+
+      ${memoriesSec()}
 
       <section class="rw rw-person"><div class="rw-in">
         <p class="rw-eye">زول الأسبوع</p>
@@ -1169,6 +1233,8 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
     }
     const cp = t.closest("[data-copy]");
     if (cp) { copyText(location.origin + location.pathname + "#read-" + cp.dataset.copy).then(() => toast("تم نسخ الرابط ✔")); return; }
+    const mem = t.closest("[data-mem]");
+    if (mem) { openMemoryPhoto(+mem.dataset.mem, +mem.dataset.k); return; }
     const fws = t.closest("[data-fwshare]");
     if (fws) { shareFawaid(+fws.dataset.fwshare); return; }
     const fw = t.closest("[data-fw]");
