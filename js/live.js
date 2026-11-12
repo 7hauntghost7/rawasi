@@ -58,10 +58,15 @@
       login: (email, pass) => au.signInWithEmailAndPassword(auth, email, pass),
       logout: () => au.signOut(auth),
       onAuth: (cb) => au.onAuthStateChanged(auth, (u) => cb(!!u)),
-      async start({ motion, sideA, sideB, img }) {
+      async start(o) {
         const id = "d" + Date.now().toString(36);
         await setDoc(deb(id), { a: 0, b: 0, claps: 0 });
-        await setDoc(cur, { id, motion, sideA, sideB, img: img || "", status: "live", started: serverTimestamp() });
+        await setDoc(cur, {
+          id, motion: o.motion, sideA: o.sideA, sideB: o.sideB, img: o.img || "",
+          kind: o.kind || "", membersA: o.membersA || [], membersB: o.membersB || [],
+          when: o.when || "", place: o.place || "", link: /^https:\/\//.test(o.link || "") ? o.link : "",
+          status: o.status === "soon" ? "soon" : "live", started: serverTimestamp(),
+        });
       },
       setStatus: (status) => updateDoc(cur, { status }),
       setImage: (img) => updateDoc(cur, { img: img || "" }),

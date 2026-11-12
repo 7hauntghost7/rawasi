@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex">
   <title>مشرف المناظرة — صحيفة الرواسي</title>
   <link rel="icon" href="assets/img/brand/logo-ar-gold.png">
-  <link rel="stylesheet" href="css/style.css?v=36">
+  <link rel="stylesheet" href="css/style.css?v=37">
   <style>
     body { padding-bottom: 40px; }
     .top { position: sticky; top: 0; z-index: 10; background: rgba(250, 246, 238, .92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
@@ -20,7 +20,8 @@
     .f { margin-bottom: 12px; }
     .f label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
     .f input { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 0; box-shadow: inset 0 0 0 1.5px var(--line); background: var(--paper); }
-    .f input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--mustard); background: #fff; }
+    .f input:focus, .f textarea:focus { outline: none; box-shadow: inset 0 0 0 2px var(--mustard); background: #fff; }
+    .f textarea { width: 100%; font: inherit; font-size: 15px; margin-top: 6px; padding: 8px 12px; border-radius: 12px; border: 0; box-shadow: inset 0 0 0 1.5px var(--line); background: var(--paper); resize: vertical; }
     .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .btns { display: flex; gap: 10px; flex-wrap: wrap; }
     .btn.red { background: #c2361a; color: #fff; }
@@ -55,9 +56,9 @@
   <main class="wrap mod" id="app"><div class="box msgbox">جارٍ الاتصال…</div></main>
   <div class="toast" id="toast"></div>
 
-  <script src="js/data.js?v=36"></script>
-  <script src="js/firebase-config.js?v=36"></script>
-  <script src="js/live.js?v=36"></script>
+  <script src="js/data.js?v=37"></script>
+  <script src="js/firebase-config.js?v=37"></script>
+  <script src="js/live.js?v=37"></script>
   <script>
   (() => {
     const $ = (s, r = document) => r.querySelector(s);
@@ -106,18 +107,27 @@
         <div class="box">
           <h3>🔴 مناظرة جديدة</h3>
           <form id="nf">
-            <div class="f"><label>موضوع المناظرة</label><input id="motion" list="mo" value="${esc((upcoming[0] || {}).motion || "")}"><datalist id="mo">${upcoming.map((d) => `<option value="${esc(d.motion)}">`).join("")}</datalist></div>
+            <div class="f"><label>نوع المناظرة (اختياري)</label><input id="kind" maxlength="40" placeholder="مثل: مناظرة جماهيرية"></div>
+            <div class="f"><label>موضوع المناظرة</label><input id="motion" list="mo" value="${esc((upcoming[0] || {}).motion || "")}" placeholder="مثل: هذا المجلس سيقتطع من…"><datalist id="mo">${upcoming.map((d) => `<option value="${esc(d.motion)}">`).join("")}</datalist></div>
             <div class="two">
-              <div class="f"><label>الطرف الأول</label><input id="sa" value="مؤيد" maxlength="30"></div>
-              <div class="f"><label>الطرف الثاني</label><input id="sb" value="معارض" maxlength="30"></div>
+              <div class="f"><label>الفريق الأول</label><input id="sa" value="مؤيد" maxlength="30"><textarea id="ma" rows="3" placeholder="الأعضاء، كل اسم في سطر"></textarea></div>
+              <div class="f"><label>الفريق الثاني</label><input id="sb" value="معارض" maxlength="30"><textarea id="mb" rows="3" placeholder="الأعضاء، كل اسم في سطر"></textarea></div>
             </div>
-            <div class="f"><label>صورة المناظرة (اختياري)</label>
+            <div class="two">
+              <div class="f"><label>الموعد (اختياري)</label><input id="when" type="datetime-local"></div>
+              <div class="f"><label>المكان أو المنصة</label><input id="place" maxlength="60" placeholder="مثل: على منصة قوقل ميت"></div>
+            </div>
+            <div class="f"><label>رابط الانضمام (اختياري)</label><input id="link" dir="ltr" placeholder="https://meet.google.com/…"></div>
+            <div class="f"><label>الملصق أو الصورة (اختياري)</label>
               <div class="img-pick">
                 <label class="btn ghost">📷 اختر صورة<input type="file" accept="image/*" hidden id="dimg"></label>
                 <img id="dimg-prev" alt="" hidden><button type="button" class="btn ghost" id="dimg-x" hidden>إزالة</button>
               </div>
             </div>
-            <button class="btn red big">ابدأ البث المباشر</button>
+            <div class="btns">
+              <button class="btn gold big" data-mode="soon">📣 أعلن المناظرة (قريبًا)</button>
+              <button class="btn red big" data-mode="live">ابدأ البث المباشر الآن</button>
+            </div>
           </form>
         </div>
         <div class="box"><h3 id="ch">💬 التعليقات</h3><div id="cms"></div></div>
@@ -130,7 +140,7 @@
         const live = cur.status === "live";
         const a = tally.a || 0, b = tally.b || 0, t = a + b, pa = t ? Math.round((a / t) * 100) : 50;
         box.innerHTML = `
-          <div class="live-top ${live ? "is-live" : ""}" style="margin-bottom:6px"><span class="live-pill">${live ? "<i></i> مباشر الآن" : "متوقفة"}</span><span class="meta">👏 ${tally.claps || 0}</span></div>
+          <div class="live-top ${live ? "is-live" : ""}" style="margin-bottom:6px"><span class="live-pill">${live ? "<i></i> مباشر الآن" : cur.status === "soon" ? "قريبًا (مُعلنة)" : "متوقفة"}</span><span class="meta">👏 ${tally.claps || 0}</span></div>
           ${cur.img ? `<img class="st-img" src="${/^data:image\//.test(cur.img) ? cur.img : ""}" alt="">` : ""}
           <h3 style="font-size:18px;line-height:1.6">«${esc(cur.motion)}»</h3>
           <div class="tug"><div class="ta" style="width:${pa}%"><b>${t ? pa + "%" : ""}</b></div><div class="tb"><b>${t ? 100 - pa + "%" : ""}</b></div></div>
@@ -140,7 +150,8 @@
             ${cur.img ? `<button class="btn ghost" data-noimg>إزالة الصورة</button>` : ""}
           </div>
           <div class="btns" style="margin-top:10px">
-            ${live ? `<button class="btn big" data-st="closed">⏹ إنهاء التصويت والتعليقات</button>` : `<button class="btn gold big" data-st="live">▶ إعادة فتح التصويت</button>
+            ${live ? `<button class="btn big" data-st="closed">⏹ إنهاء التصويت والتعليقات</button>` : cur.status === "soon" ? `<button class="btn red big" data-st="live">▶ ابدأ البث الآن</button>
+              <button class="btn ghost big" data-clear>إلغاء الإعلان</button>` : `<button class="btn gold big" data-st="live">▶ إعادة فتح التصويت</button>
               <button class="btn ghost big" data-clear>إزالة المناظرة من الموقع</button>`}
           </div>`;
       };
@@ -203,7 +214,7 @@
       const shrink = (file) => new Promise((res, rej) => {
         const im = new Image();
         im.onload = () => {
-          const sc = Math.min(1, 1000 / Math.max(im.naturalWidth, im.naturalHeight));
+          const sc = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight));
           const c = document.createElement("canvas");
           c.width = Math.round(im.naturalWidth * sc); c.height = Math.round(im.naturalHeight * sc);
           const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
@@ -228,10 +239,18 @@
         e.preventDefault();
         const motion = $("#motion").value.trim();
         if (!motion) return toast("اكتب موضوع المناظرة");
+        const link = $("#link").value.trim();
+        if (link && !/^https:\/\//.test(link)) return toast("الرابط يجب أن يبدأ بـ https://");
+        const lines = (id) => $(id).value.split("\n").map((x) => x.trim()).filter(Boolean);
+        const mode = e.submitter && e.submitter.dataset.mode === "soon" ? "soon" : "live";
         if (cur && cur.status === "live" && !confirm("هناك مناظرة جارية. بدء مناظرة جديدة سيُنهيها. متابعة؟")) return;
         try {
-          await be.start({ motion, sideA: $("#sa").value.trim() || "مؤيد", sideB: $("#sb").value.trim() || "معارض", img: picked });
-          toast("بدأ البث المباشر 🔴");
+          await be.start({
+            motion, kind: $("#kind").value.trim(), status: mode, img: picked, link,
+            sideA: $("#sa").value.trim() || "مؤيد", sideB: $("#sb").value.trim() || "معارض",
+            membersA: lines("#ma"), membersB: lines("#mb"), when: $("#when").value, place: $("#place").value.trim(),
+          });
+          toast(mode === "soon" ? "أُعلنت المناظرة 📣" : "بدأ البث المباشر 🔴");
           picked = ""; $("#dimg-prev").hidden = true; $("#dimg-x").hidden = true;
           scrollTo({ top: 0, behavior: "smooth" });
         } catch (er) { toast(nice(er)); }

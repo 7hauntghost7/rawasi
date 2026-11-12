@@ -94,7 +94,7 @@
   function homeBanner(be) {
     let el = null;
     be.watchDebate((cur) => {
-      if (cur && cur.status === "live") {
+      if (cur && (cur.status === "live" || cur.status === "soon")) {
         if (!el) {
           el = document.createElement("a");
           el.className = "live-banner";
@@ -102,7 +102,8 @@
           $("#main").prepend(el);
         }
         const bimg = /^data:image\/(jpeg|png|webp);base64,/.test(cur.img || "") ? cur.img : "";
-        el.innerHTML = `${bimg ? `<img class="lb-img" src="${bimg}" alt="">` : `<span class="live-dot"></span>`}<span class="tx"><b>مناظرة مباشرة الآن</b><span>«${esc(cur.motion)}»</span></span><span class="go">صوّت ←</span>`;
+        el.innerHTML = `${bimg ? `<img class="lb-img" src="${bimg}" alt="">` : `<span class="live-dot"></span>`}<span class="tx"><b>${cur.status === "soon" ? "مناظرة قادمة" : "مناظرة مباشرة الآن"}</b><span>«${esc(cur.motion)}»</span></span><span class="go">${cur.status === "soon" ? "التفاصيل ←" : "صوّت ←"}</span>`;
+        el.classList.toggle("is-soon", cur.status === "soon");
       } else if (el) { el.remove(); el = null; }
     });
   }
@@ -124,7 +125,7 @@
       if (oldPoll) oldPoll.hidden = true;
       sec.hidden = false;
       const newDebate = !cur || cur.id !== d.id;
-      const newSig = [d.id, d.status, d.motion, d.sideA, d.sideB, (d.img || "").length, (d.img || "").slice(-40)].join("|");
+      const newSig = JSON.stringify({ ...d, started: 0, img: (d.img || "").length + (d.img || "").slice(-40) });
       cur = d;
       if (newDebate) {
         if (unT) unT();
@@ -152,20 +153,33 @@
     }
 
     const safeImg = (src) => (/^data:image\/(jpeg|png|webp);base64,/.test(src || "") ? src : "");
+    const safeLink = (x) => (/^https:\/\//.test(x || "") ? x : "");
+    const whenText = (w) => {
+      const d = w ? new Date(w) : null;
+      if (!d || isNaN(d)) return "";
+      return d.toLocaleDateString("ar-SD-u-nu-latn", { weekday: "long", day: "numeric", month: "long" }) + " · " + d.toLocaleTimeString("ar-SD-u-nu-latn", { hour: "numeric", minute: "2-digit" });
+    };
+    const joinLabel = (x) => (/meet\.google/.test(x) ? "انضم عبر Google Meet" : /zoom\./.test(x) ? "انضم عبر Zoom" : "رابط المناظرة");
+    const teamHtml = (side) => {
+      const name = side === "a" ? cur.sideA : cur.sideB, mem = (side === "a" ? cur.membersA : cur.membersB) || [];
+      return `<div class="lv-team ${side}"><b>${esc(name)}</b>${mem.length ? `<ul>${mem.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` : ""}</div>`;
+    };
     function render() {
-      const live = cur.status === "live", img = safeImg(cur.img);
+      const st = cur.status, live = st === "live", soon = st === "soon";
+      const img = safeImg(cur.img), link = safeLink(cur.link), when = whenText(cur.when);
       sec.innerHTML = `
-        <div class="lv ${live ? "is-live" : "is-closed"}">
-          <div class="lv-cover ${img ? "has-img" : ""}">
-            ${img ? `<img src="${img}" alt="">` : ""}
-            <div class="lv-over">
-              <span class="live-pill">${live ? "<i></i> مباشر الآن" : "انتهت المناظرة"}</span>
-              <h2 class="live-motion">«${esc(cur.motion)}»</h2>
-              <span class="lv-count" id="lv-count"></span>
-            </div>
+        <div class="lv is-${esc(st)}">
+          ${img ? `<div class="lv-poster"><img src="${img}" alt="ملصق المناظرة"></div>` : ""}
+          <div class="lv-head">
+            <div class="lv-pills"><span class="live-pill">${live ? "<i></i> مباشر الآن" : soon ? "قريبًا" : "انتهت المناظرة"}</span>${cur.kind ? `<span class="lv-kind">${esc(cur.kind)}</span>` : ""}</div>
+            <h2 class="live-motion">«${esc(cur.motion)}»</h2>
+            ${when || cur.place ? `<p class="lv-when">${[when, cur.place].filter(Boolean).map(esc).join(" ✦ ")}</p>` : ""}
+            <span class="lv-count" id="lv-count"></span>
+            ${link && st !== "closed" ? `<a class="btn gold lv-join" href="${esc(link)}" target="_blank" rel="noopener">${joinLabel(link)}</a>` : ""}
           </div>
           <div class="lv-body">
-            <div class="lv-sides"><span class="sa">${esc(cur.sideA)}</span><span class="sb">${esc(cur.sideB)}</span></div>
+            <div class="lv-teams">${teamHtml("a")}<span class="lv-vs">ضد</span>${teamHtml("b")}</div>
+            ${soon ? `<p class="live-hint">التصويت والتعليقات تُفتح مع انطلاق المناظرة.</p>` : `
             <div class="tug" aria-hidden="true"><div class="ta" id="ta"><b id="pa"></b></div><div class="tb"><b id="pb"></b></div></div>
             <div class="vote-btns">
               <button class="vb a" data-v="a" ${live ? "" : "disabled"}><span>${esc(cur.sideA)}</span><small id="na"></small></button>
@@ -179,7 +193,7 @@
               </div>
               <div class="chat-list" id="chat" aria-live="polite"></div>
               ${live ? formHtml() : `<p class="meta" style="text-align:center;margin:10px 0 0">أُغلقت التعليقات</p>`}
-            </div>
+            </div>`}
           </div>
         </div>`;
       paintTally();
@@ -187,6 +201,14 @@
     }
 
     function paintTally() {
+      if (cur && cur.status === "soon") {
+        const c = $("#lv-count"), d = cur.when ? new Date(cur.when) : null;
+        if (c && d && !isNaN(d)) {
+          const days = Math.round((new Date(d).setHours(12, 0, 0, 0) - new Date().setHours(12, 0, 0, 0)) / 864e5);
+          c.textContent = days > 1 ? `تبدأ بعد ${days} ${days <= 10 ? "أيام" : "يومًا"}` : days === 1 ? "تبدأ غدًا" : days === 0 ? "تبدأ اليوم" : "";
+        }
+        return;
+      }
       if (!cur || !$("#ta")) return;
       const a = Math.max(0, tally.a || 0), b = Math.max(0, tally.b || 0), total = a + b;
       const pa = total ? Math.round((a / total) * 100) : 50;
