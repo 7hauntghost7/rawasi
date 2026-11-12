@@ -56,7 +56,7 @@
 
   /* ---------- خمّن من؟ ---------- */
   const who = () => mcq({
-    id: "who", title: "خمّن منو؟", items: GUESS_WHO,
+    id: "who", title: "خمّن مَن؟", items: GUESS_WHO,
     view: (g) => `<div class="kid-photo"><span class="tape"></span>
         ${g.img ? `<img src="${g.img}" alt="صورة طفولة" style="filter:blur(10px) sepia(.4)">` : `${window.R.KID_SVG}`}
       </div><div class="hint">${esc(g.hint)}</div>`,
@@ -361,7 +361,7 @@
   /* ---------- القائمة ---------- */
   const GAMES = [
     { id: "cw", e: "✦", name: "كلمات العدد", d: "إجاباتها في مقالات العدد", run: crossword },
-    { id: "who", e: "؟", name: "خمّن منو؟", d: "زملاؤك وهم صغار", run: who },
+    { id: "who", e: "؟", name: "خمّن مَن؟", d: "زملاؤك وهم صغار", run: who },
     { id: "word", e: "ك", name: "كلمة الرواسي", d: "كلمة جديدة كل يوم", run: word },
     { id: "qul", e: "قل", name: "قل ولا تقل", d: "أيّ العبارتين أصح؟", run: qul },
     { id: "verse", e: "بيت", name: "أكمل البيت", d: "من عيون الشعر العربي", run: verse },

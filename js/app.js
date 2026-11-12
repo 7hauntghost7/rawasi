@@ -386,7 +386,7 @@
 
     ${g ? `<section class="tz"><a class="tz-in wrap" href="rawasiyat.html">
       <div class="tz-ph">${g.img ? `<img src="${esc(g.img)}" alt="">` : KID_SVG}</div>
-      <div><small>رواسيات</small><h2>خمّن منو؟</h2><p>${esc(g.hint)}</p></div>
+      <div><small>رواسيات</small><h2>خمّن مَن؟</h2><p>${esc(g.hint)}</p></div>
     </a></section>` : ""}
 
     <section class="section wrap">
@@ -913,7 +913,7 @@ ${url}`);
     const day0 = new Date(); day0.setHours(12, 0, 0, 0);
     const list = UPCOMING.map((e) => ({ e, n: Math.round((new Date(e.date + "T12:00:00") - day0) / 864e5) }))
       .filter(({ n }) => n >= 0).sort((x, y) => x.n - y.n);
-    const when = (n) => (n === 0 ? "اليوم" : n === 1 ? "بكرة" : n === 2 ? "بعد يومين" : n <= 10 ? `بعد ${n} أيام` : `بعد ${n} يومًا`);
+    const when = (n) => (n === 0 ? "اليوم" : n === 1 ? "غدًا" : n === 2 ? "بعد يومين" : n <= 10 ? `بعد ${n} أيام` : `بعد ${n} يومًا`);
     return `<section class="rw up"><div class="rw-in">
       <p class="rw-eye">لا يفوتك</p>
       <h2>يحدث قريبًا</h2>
@@ -924,7 +924,7 @@ ${url}`);
           <div class="up-t"><b>${esc(e.title)}</b><small>${[e.time, e.place].filter(Boolean).map(esc).join(" ✦ ")}</small></div>
           <span class="up-c ${n === 0 ? "now" : ""}">${when(n)}</span>
         </div>`;
-      }).join("")}</div>` : `<p class="up-empty">ما في فعاليات معلنة حاليًا — تابعونا.</p>`}
+      }).join("")}</div>` : `<p class="up-empty">لا توجد فعاليات معلنة حاليًا، تابعونا.</p>`}
     </div></section>`;
   }
 
@@ -959,16 +959,16 @@ ${url}`);
     const tones = ["a", "b", "c"];
     return `
       ${g ? `<section class="rw rw-guess"><div class="rw-in" id="rw-guess" data-answer="${g.answer}">
-        <h1>خمّن منو؟</h1>
+        <h1>خمّن مَن؟</h1>
         <div class="rw-photo" id="rw-photo">${g.img ? `<img src="${esc(g.img)}" alt="صورة طفولة">` : KID_SVG}</div>
         <p class="rw-hint">${esc(g.hint)}</p>
         <div class="rw-names">${g.options.map((o, i) => `<button type="button" data-i="${i}">${esc(o)}</button>`).join("")}</div>
         <p class="rw-result" id="rw-result" aria-live="polite"></p>
-        <a class="rw-more" href="games.html#who">العب باقي الصور ←</a>
+        <a class="rw-more" href="games.html#who">العب بقية الصور ←</a>
       </div></section>` : ""}
 
       ${SAID.length ? `<section class="rw rw-said">
-        <div class="rw-in"><h2>سمعناها في السكشن</h2></div>
+        <div class="rw-in"><h2>سمعناها في المحاضرات</h2></div>
         <div class="rw-swipe">${SAID.map((s, i) => `<div class="rw-q ${tones[i % 3]}"><p>«${esc(s.q)}»</p><small>${esc(s.by)}</small></div>`).join("")}</div>
       </section>` : ""}
 
@@ -984,7 +984,7 @@ ${url}`);
       ${memoriesSec()}
 
       <section class="rw rw-person"><div class="rw-in">
-        <p class="rw-eye">زول الأسبوع</p>
+        <p class="rw-eye">وجه الأسبوع</p>
         <div class="rw-who">
           <div class="rw-av">${PERSON.img ? `<img src="${esc(PERSON.img)}" alt="">` : esc([...String(PERSON.name || "؟")][0])}</div>
           <div><h2>${esc(PERSON.name)}</h2><p>${esc(PERSON.info)}</p></div>
@@ -1003,7 +1003,7 @@ ${url}`);
       btns.forEach((x, i) => x.classList.add(i === ans ? "yes" : "no"));
       $("#rw-photo").classList.add("open");
       const name = btns[ans] ? btns[ans].textContent : "";
-      $("#rw-result").textContent = +b.dataset.i === ans ? `صاح عليك! الإجابة: ${name}` : `لا يا زول، الإجابة: ${name}`;
+      $("#rw-result").textContent = +b.dataset.i === ans ? `أحسنت! الإجابة: ${name}` : `ليست هذه، الإجابة: ${name}`;
     });
     const ab = $("#rw-ask");
     if (ab) {
