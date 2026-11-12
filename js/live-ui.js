@@ -22,10 +22,73 @@
   const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 
   LIVE.ready.then((be) => {
+    if (page === "rawasiyat") mountThread(be);
     if (!be) return;
     if (page === "home") homeBanner(be);
     if (page === "munazarat") mount(be);
   });
+
+  /* ---------- تعليقات شخصية العدد ---------- */
+  function mountThread(be) {
+    const box = $("#ps-com");
+    if (!box) return;
+    const tid = box.dataset.tid, list = $("#th-list"), wrap = $("#th-form-wrap");
+    if (!be || !be.watchThread) {
+      list.innerHTML = `<div class="chat-empty">التعليقات تُفتح قريبًا.</div>`;
+      return;
+    }
+    const whoHtml = () => {
+      const name = store.get("cname", "");
+      return name ? `تعلّق باسم <b>${esc(name)}</b> · <button type="button" id="th-chname">تغيير</button>` : `<input id="th-name" maxlength="30" placeholder="اسمك (يظهر مع تعليقك)">`;
+    };
+    wrap.innerHTML = `<form class="chat-form" id="th-form" autocomplete="off">
+      <div class="who" id="th-who">${whoHtml()}</div>
+      <div class="row"><textarea id="th-text" rows="1" maxlength="500" placeholder="اكتب له كلمة شكر…"></textarea>
+      <button class="send" aria-label="إرسال">${ICON_SEND}</button></div>
+    </form>`;
+    let items = [];
+    const paint = (force) => {
+      const near = force || list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+      const vis = items.filter((c) => !c.hidden);
+      $("#th-n").textContent = vis.length ? `${vis.length} تعليق` : "";
+      list.innerHTML = vis.length
+        ? vis.map((c) => `<div class="msg"><div class="mh"><b>${esc(c.name)}</b><small>${ago(c.ts)}</small></div><p>${esc(c.text)}</p></div>`).join("")
+        : `<div class="chat-empty">كن أول من يكتب له كلمة</div>`;
+      if (near) list.scrollTop = list.scrollHeight;
+    };
+    be.watchThread(tid, (c) => { items = c || []; paint(); });
+    setInterval(() => paint(), 30000);
+    box.addEventListener("click", (e) => {
+      if (!e.target.closest("#th-chname")) return;
+      store.set("cname", "");
+      $("#th-who").innerHTML = whoHtml();
+      $("#th-name").focus();
+    });
+    box.addEventListener("input", (e) => {
+      if (e.target.id === "th-text") { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px"; }
+    });
+    let sending = false;
+    box.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (sending) return;
+      const nameEl = $("#th-name"), textEl = $("#th-text");
+      const name = (nameEl ? nameEl.value : store.get("cname", "")).trim(), text = textEl.value.trim();
+      if (!name) { toast("اكتب اسمك أولًا"); if (nameEl) nameEl.focus(); return; }
+      if (!text) { textEl.focus(); return; }
+      sending = true;
+      const btn = $("#th-form .send");
+      btn.disabled = true;
+      try {
+        await be.addToThread(tid, { name, text });
+        store.set("cname", name);
+        textEl.value = ""; textEl.style.height = "auto";
+        $("#th-who").innerHTML = whoHtml();
+        setTimeout(() => paint(true), 300);
+      } catch (err) { toast(nice(err)); }
+      sending = false;
+      btn.disabled = false;
+    });
+  }
 
   /* ---------- شريط الصفحة الرئيسية ---------- */
   function homeBanner(be) {

@@ -66,10 +66,18 @@
       setStatus: (status) => updateDoc(cur, { status }),
       clear: () => deleteDoc(cur),
       hide: (id, cid, hidden) => updateDoc(doc(db, "debates", id, "comments", cid), { hidden }),
+      // تعليقات على شخصية العدد
+      watchThread: (tid, cb) => onSnapshot(
+        query(collection(db, "threads", tid, "comments"), orderBy("ts", "desc"), limit(100)),
+        (s) => cb(s.docs.map((d) => { const x = d.data(); return { id: d.id, ...x, ts: x.ts && x.ts.toMillis ? x.ts.toMillis() : Date.now() }; }).reverse()),
+        warn),
+      addToThread: (tid, c) => addDoc(collection(db, "threads", tid, "comments"), { name: c.name, text: c.text, device, ts: serverTimestamp(), hidden: false }),
+      hideInThread: (tid, cid, hidden) => updateDoc(doc(db, "threads", tid, "comments", cid), { hidden }),
     };
   }
 
   /* ---------- serve.py على الشبكة المحلية ---------- */
+  function watchThread() { /* يحمل آخر دالة سحب للتحديث الفوري بعد الإرسال */ }
   function localBackend() {
     const subs = { d: new Set(), t: new Set(), c: new Set() };
     let timer = null, pass = ls.get("modpass") || "";
@@ -114,6 +122,15 @@
       setStatus: (status) => admin("status", { status }),
       clear: () => admin("clear"),
       hide: (id, cid, hidden) => admin("hide", { cid, hidden }),
+      watchThread(tid, cb) {
+        const pull = async () => { try { cb((await (await fetch(`/api/thread?tid=${encodeURIComponent(tid)}&t=${Date.now()}`)).json()).comments || []); } catch { /* */ } };
+        pull();
+        const t = setInterval(pull, 4000);
+        watchThread.pull = pull;
+        return () => clearInterval(t);
+      },
+      async addToThread(tid, c) { await post("/api/thread/comment", { tid, device, ...c }); if (watchThread.pull) watchThread.pull(); },
+      hideInThread: (tid, cid, hidden) => post("/api/thread/hide", { pass, tid, cid, hidden }),
     };
   }
 

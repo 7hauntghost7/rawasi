@@ -758,12 +758,18 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 /* ===== رواسيات: شخصية العدد ===== */
 .ps { background: var(--sand); color: var(--brown); padding: 32px 0; }
 .ps-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
-.ps-q { width: 76px; height: 76px; border-radius: 50%; background: var(--brown); color: var(--gold); display: grid; place-items: center; font-family: var(--f-head); font-size: 44px; flex-shrink: 0; }
-.ps h2 { font-size: 38px; color: var(--brown); }
+.ps h2 { font-size: 38px; color: var(--brown); margin: 0; }
+.ps-av { width: 84px; height: 84px; border-radius: 50%; overflow: hidden; background: var(--brown); color: var(--gold); display: grid; place-items: center; font-family: var(--f-head); font-size: 42px; flex-shrink: 0; }
+.ps-av img { width: 100%; height: 100%; object-fit: cover; }
+.ps-info { margin: 0; font-size: 14px; font-weight: 500; }
+.ps { scroll-margin-top: 58px; }
+.ps-share { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.ps-com { margin-top: 16px; background: var(--card); border-radius: 20px; padding: 14px 14px 12px; }
+.ps-com .chat-head > b { font-size: 22px; }
+.ps-com .chat-list { max-height: 420px; }
 .ps-text p { font-family: var(--f-body); font-size: 21px; line-height: 1.75; margin: 0 0 .7em; color: var(--ink); }
 .ps-clues { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
 .ps-clues span { background: var(--brown); color: var(--sand); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 500; }
-.ps-note { font-family: var(--f-body); font-size: 20px; font-weight: 600; margin: 6px 0 0; color: var(--brick); }
 
 /* ===== رواسيات: يحدث قريبًا ===== */
 .up { background: var(--rust); color: #fff; padding: 32px 0; }

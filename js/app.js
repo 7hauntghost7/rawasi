@@ -881,13 +881,29 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
 
   /* ---------- شخصية العدد ---------- */
   function personaSec() {
-    if (!has("PERSONA") || !PERSONA || !(PERSONA.text || []).length) return "";
+    if (!has("PERSONA") || !PERSONA || !PERSONA.name) return "";
     const p = PERSONA;
-    return `<section class="rw ps"><div class="rw-in">
-      <div class="ps-top"><div class="ps-q">؟</div><div><p class="rw-eye">شخصية العدد ${esc(p.issue)}</p><h2>منو ده؟</h2></div></div>
-      <div class="ps-text">${p.text.map((t) => `<p>${esc(t)}</p>`).join("")}</div>
-      ${(p.clues || []).length ? `<div class="ps-clues">${p.clues.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
-      <p class="ps-note">عرفته؟ خلّيها سر.</p>
+    const url = location.origin + location.pathname.replace(/[^/]*$/, "") + "rawasiyat.html#persona";
+    const wa = "https://wa.me/?text=" + encodeURIComponent(`شخصية العدد ${p.issue} في ${SITE.name}: ${p.name}
+اكتب له كلمة:
+${url}`);
+    return `<section class="rw ps" id="persona"><div class="rw-in">
+      <p class="rw-eye">شخصية العدد ${esc(p.issue)} ✦ تقدير من الدفعة</p>
+      <div class="ps-top">
+        <div class="ps-av">${p.img ? `<img src="${esc(p.img)}" alt="">` : esc([...String(p.name)][0])}</div>
+        <div><h2>${esc(p.name)}</h2>${p.info ? `<p class="ps-info">${esc(p.info)}</p>` : ""}</div>
+      </div>
+      <div class="ps-text">${(p.text || []).map((t) => `<p>${esc(t)}</p>`).join("")}</div>
+      ${(p.facts || []).length ? `<div class="ps-clues">${p.facts.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
+      <div class="ps-share">
+        <a class="btn rd-wa" href="${wa}" target="_blank" rel="noopener">شارك في واتساب</a>
+        <button type="button" class="btn ghost" data-psshare>مشاركة</button>
+      </div>
+      <div class="ps-com" id="ps-com" data-tid="persona-${esc(p.issue)}">
+        <div class="chat-head"><b>اكتب له كلمة</b><span class="meta" id="th-n"></span></div>
+        <div class="chat-list" id="th-list"><div class="chat-empty">…</div></div>
+        <div id="th-form-wrap"></div>
+      </div>
     </div></section>`;
   }
 
@@ -1233,6 +1249,16 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
     }
     const cp = t.closest("[data-copy]");
     if (cp) { copyText(location.origin + location.pathname + "#read-" + cp.dataset.copy).then(() => toast("تم نسخ الرابط ✔")); return; }
+    if (t.closest("[data-psshare]")) {
+      const url = location.origin + location.pathname.replace(/[^/]*$/, "") + "rawasiyat.html#persona";
+      (async () => {
+        try {
+          if (navigator.share) await navigator.share({ title: `شخصية العدد: ${PERSONA.name}`, text: "اكتب له كلمة", url });
+          else { await copyText(url); toast("تم نسخ الرابط ✔"); }
+        } catch { /* أُلغيت */ }
+      })();
+      return;
+    }
     const mem = t.closest("[data-mem]");
     if (mem) { openMemoryPhoto(+mem.dataset.mem, +mem.dataset.k); return; }
     const fws = t.closest("[data-fwshare]");
