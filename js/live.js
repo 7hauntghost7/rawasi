@@ -79,11 +79,40 @@
         warn),
       addToThread: (tid, c) => addDoc(collection(db, "threads", tid, "comments"), { name: c.name, text: c.text, device, ts: serverTimestamp(), hidden: false }),
       hideInThread: (tid, cid, hidden) => updateDoc(doc(db, "threads", tid, "comments", cid), { hidden }),
+      // سؤال الدفعة: صوت واحد لكل جهاز يمكن تغييره
+      watchPoll: (pid, n, cb) => onSnapshot(doc(db, "polls", pid), (s) => {
+        const d = s.exists() ? s.data() : {};
+        cb([...Array(n)].map((_, i) => Math.max(0, d["o" + i] || 0)));
+      }, warn),
+      async myPollVote(pid) { const s = await getDoc(doc(db, "polls", pid, "votes", device)); return s.exists() ? s.data().opt : null; },
+      async pollVote(pid, opt) {
+        await runTransaction(db, async (tx) => {
+          const vref = doc(db, "polls", pid, "votes", device), pref = doc(db, "polls", pid);
+          const v = await tx.get(vref), p = await tx.get(pref);
+          const old = v.exists() ? v.data().opt : null;
+          if (old === opt) return;
+          if (!p.exists()) tx.set(pref, { ["o" + opt]: 1 });
+          else {
+            const u = { ["o" + opt]: increment(1) };
+            if (old != null) u["o" + old] = increment(-1);
+            tx.update(pref, u);
+          }
+          tx.set(vref, { opt, ts: serverTimestamp() });
+        });
+      },
+      // لوحة شرف الكلمات المتقاطعة
+      watchBoard: (bid, cb) => onSnapshot(query(collection(db, "boards", bid, "scores"), orderBy("score"), limit(10)),
+        (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))), warn),
+      submitScore: (bid, r) => setDoc(doc(db, "boards", bid, "scores", device), {
+        name: r.name, ms: Math.round(r.ms), hints: r.hints, score: r.hints * 600000 + Math.round(r.ms), ts: serverTimestamp(),
+      }),
     };
   }
 
   /* ---------- serve.py على الشبكة المحلية ---------- */
   function watchThread() { /* يحمل آخر دالة سحب للتحديث الفوري بعد الإرسال */ }
+  function watchPoll() { /* كذلك */ }
+  function watchBoard() { /* كذلك */ }
   function localBackend() {
     const subs = { d: new Set(), t: new Set(), c: new Set() };
     let timer = null, pass = ls.get("modpass") || "";
@@ -138,6 +167,21 @@
       },
       async addToThread(tid, c) { await post("/api/thread/comment", { tid, device, ...c }); if (watchThread.pull) watchThread.pull(); },
       hideInThread: (tid, cid, hidden) => post("/api/thread/hide", { pass, tid, cid, hidden }),
+      watchPoll(pid, n, cb) {
+        const pull = async () => { try { cb((await (await fetch(`/api/poll?pid=${pid}&t=${Date.now()}`)).json()).counts.slice(0, n)); } catch { /* */ } };
+        pull(); watchPoll.pull = pull;
+        const t = setInterval(pull, 5000);
+        return () => clearInterval(t);
+      },
+      async myPollVote(pid) { try { return (await (await fetch(`/api/poll?pid=${pid}&device=${device}`)).json()).mine ?? null; } catch { return null; } },
+      async pollVote(pid, opt) { await post("/api/poll/vote", { pid, device, opt }); if (watchPoll.pull) watchPoll.pull(); },
+      watchBoard(bid, cb) {
+        const pull = async () => { try { cb((await (await fetch(`/api/board?bid=${bid}&t=${Date.now()}`)).json()).scores); } catch { /* */ } };
+        pull(); watchBoard.pull = pull;
+        const t = setInterval(pull, 10000);
+        return () => clearInterval(t);
+      },
+      async submitScore(bid, r) { await post("/api/board/score", { bid, device, name: r.name, ms: Math.round(r.ms), hints: r.hints }); if (watchBoard.pull) watchBoard.pull(); },
     };
   }
 

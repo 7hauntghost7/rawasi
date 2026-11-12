@@ -848,3 +848,29 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .lv-vs { align-self: center; font-family: var(--f-head); font-size: 18px; color: var(--ink-soft); }
 .live-banner.is-soon { background: var(--brown); }
 .live-banner.is-soon .live-dot { animation: none; background: var(--gold); }
+
+/* ===== قاعدة البيانات المشتركة: سؤال الدفعة، تعليقات المقالات، لوحة الشرف ===== */
+.rw-opt { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.rw-opt i { position: absolute; inset: 0; inset-inline-end: auto; width: 0; background: rgba(233, 171, 17, .38); transition: width .7s ease; }
+.rw-opt span, .rw-opt b { position: relative; }
+.rw-opt b { font-family: var(--f-head); font-weight: 400; font-size: 19px; color: var(--brick); }
+.rw-opt.mine { background: var(--card); box-shadow: inset 0 0 0 2.5px var(--brown); }
+.rw-ask-n { margin: 6px 0 0; }
+.rd-com { max-width: 640px; margin: 0 auto; padding: 4px 20px 24px; }
+.rd-com .chat-head > b { font-size: 24px; }
+.rd-com-note { margin: -4px 0 8px; }
+.rd-com .chat-list { max-height: 420px; }
+.th-closed { text-align: center; margin: 10px 0 0; }
+.cw-board { margin-top: 18px; background: var(--paper); border-radius: 18px; padding: 14px 16px; }
+.cw-board h3 { font-size: 24px; margin: 0 0 6px; }
+#cw-top { list-style: none; margin: 0; padding: 0; }
+#cw-top li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1.5px solid var(--line); }
+#cw-top li:last-child { border-bottom: 0; }
+#cw-top li.none { color: var(--ink-soft); justify-content: center; }
+#cw-top .rk { font-family: var(--f-head); font-size: 20px; color: var(--rust); min-width: 22px; }
+#cw-top b { flex: 1; font-weight: 600; }
+#cw-top small { color: var(--ink-soft); }
+#cw-top li.me b { color: var(--teal); }
+.cw-sub { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+.cw-sub input { flex: 1; max-width: 220px; min-width: 0; font: inherit; font-size: 16px; border: 0; border-radius: 12px; padding: 8px 12px; }
+.cw-sent { margin: 10px 0 0; font-weight: 600; }

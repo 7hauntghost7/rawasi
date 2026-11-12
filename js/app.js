@@ -203,6 +203,7 @@
   function closeModal(fromPop) {
     if (!isOpen()) return;
     $("#reader").classList.remove("open");
+    if (window.RAWASI_COMMENTS_STOP) window.RAWASI_COMMENTS_STOP();
     $("#reader .sheet").innerHTML = ""; // يوقف الفيديو وأي محتوى يعمل في الخلفية
     document.body.style.overflow = "";
     if (fromPop) return;
@@ -253,6 +254,15 @@
     return [...same, ...rest].slice(0, 3);
   }
 
+  // تعليقات المقال تبقى مفتوحة أيامًا محددة بعد نشره (SITE.commentDays، الافتراضي يومان)
+  // ينتظر حتى تُحمَّل كل السكربتات (ومنها اتصال قاعدة البيانات)
+  const afterScripts = (fn) => (document.readyState === "loading" ? addEventListener("DOMContentLoaded", fn, { once: true }) : fn());
+  const commentDays = () => (SITE.commentDays != null && SITE.commentDays !== "" ? Math.max(0, +SITE.commentDays) : 2);
+  const commentEnd = (a) => new Date(a.date + "T23:59:59").getTime() + commentDays() * 864e5;
+  const commentsOpen = (a) => Date.now() <= commentEnd(a);
+  const commentNote = (a) => commentsOpen(a)
+    ? `التعليقات مفتوحة حتى ${new Date(commentEnd(a)).toLocaleDateString("ar-SD-u-nu-latn", { weekday: "long", day: "numeric", month: "long" })}`
+    : "تُغلق التعليقات بعد نشر المقال بأيام قليلة.";
   function openArticle(id, fromPop) {
     const a = ARTICLES.find((x) => x.id === id);
     if (!a) return;
@@ -304,6 +314,12 @@
             <button class="btn ghost" data-copy="${a.id}">نسخ الرابط</button>
           </div>
         </div>
+        <section class="rd-com"${window.RAWASI_COMMENTS ? "" : " hidden"}>
+          <div class="chat-head"><b>التعليقات</b><span class="meta th-n"></span></div>
+          <p class="meta rd-com-note">${esc(commentNote(a))}</p>
+          <div class="chat-list th-list"><div class="chat-empty">…</div></div>
+          <div class="th-form-wrap"></div>
+        </section>
         ${a.pen ? `<div class="rd-cta"><b>عندك نص؟</b><span>منبر «بأقلام الرواسي» مفتوح لكل الدفعة.</span>
           <a class="btn" ${SITE.submitUrl !== "#" ? `href="${SITE.submitUrl}" target="_blank" rel="noopener"` : `href="#" data-soon`}>أرسل نصّك</a></div>` : ""}
         ${rel.length ? `<section class="rd-more"><h3>اقرأ كمان</h3>${rel.map((r) => {
@@ -319,6 +335,8 @@
       else history.pushState({ read: id }, "", "#read-" + id);
     }
     openModal(html);
+    const cbox = $("#reader .rd-com");
+    if (cbox && window.RAWASI_COMMENTS) window.RAWASI_COMMENTS(cbox, "art-" + a.id, { open: commentsOpen(a), placeholder: "اكتب تعليقك على المقال…", closedText: "أُغلقت التعليقات على هذا المقال." });
   }
 
   function copyText(txt) {
@@ -900,9 +918,9 @@ ${url}`);
         <button type="button" class="btn ghost" data-psshare>مشاركة</button>
       </div>
       <div class="ps-com" id="ps-com" data-tid="persona-${esc(p.issue)}">
-        <div class="chat-head"><b>اكتب له كلمة</b><span class="meta" id="th-n"></span></div>
-        <div class="chat-list" id="th-list"><div class="chat-empty">…</div></div>
-        <div id="th-form-wrap"></div>
+        <div class="chat-head"><b>اكتب له كلمة</b><span class="meta th-n"></span></div>
+        <div class="chat-list th-list"><div class="chat-empty">…</div></div>
+        <div class="th-form-wrap"></div>
       </div>
     </div></section>`;
   }
@@ -978,7 +996,8 @@ ${url}`);
       <section class="rw rw-ask"><div class="rw-in" id="rw-ask">
         <p class="rw-eye">سؤال الدفعة</p>
         <h2>${esc(ASK.question)}</h2>
-        ${ASK.options.map((o, i) => `<button type="button" class="rw-opt" data-i="${i}">${esc(o)}</button>`).join("")}
+        ${ASK.options.map((o, i) => `<button type="button" class="rw-opt" data-i="${i}"><i></i><span>${esc(o)}</span><b></b></button>`).join("")}
+        <p class="meta rw-ask-n" id="rw-ask-n"></p>
       </div></section>
 
       ${memoriesSec()}
@@ -1008,14 +1027,39 @@ ${url}`);
     const ab = $("#rw-ask");
     if (ab) {
       const key = "ask:" + ASK.question;
-      const paint = () => { const m = store.get(key, null); $$(".rw-opt", ab).forEach((o, i) => o.classList.toggle("mine", i === m)); };
+      const pid = "ask-" + [...ASK.question].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7).toString(36);
+      let mine = store.get(key, null), counts = null, be = null;
+      const paint = () => {
+        const total = counts ? counts.reduce((x, n) => x + n, 0) : 0, show = mine != null && counts && total;
+        $$(".rw-opt", ab).forEach((o, i) => {
+          o.classList.toggle("mine", i === mine);
+          const pct = show ? Math.round((counts[i] / total) * 100) : 0;
+          o.querySelector("i").style.width = show ? pct + "%" : "0";
+          o.querySelector("b").textContent = show ? pct + "%" : "";
+        });
+        $("#rw-ask-n").textContent = show ? `شارك ${total} ${total > 10 ? "من الدفعة" : "من الدفعة"} — يمكنك تغيير إجابتك` : mine != null ? "إجابتك محفوظة" : "اختر إجابتك لترى رأي الدفعة";
+      };
       ab.addEventListener("click", (e) => {
         const b = e.target.closest(".rw-opt");
         if (!b) return;
-        store.set(key, +b.dataset.i);
+        mine = +b.dataset.i;
+        store.set(key, mine);
+        if (be) be.pollVote(pid, mine).catch(() => toast("تعذّر حفظ إجابتك، حاول مرة أخرى"));
         paint();
       });
       paint();
+      afterScripts(() => {
+        if (!window.LIVE) return;
+        LIVE.ready.then(async (b) => {
+          if (!b || !b.watchPoll) return;
+          be = b;
+          try {
+            const v = await b.myPollVote(pid);
+            if (v != null) { mine = v; store.set(key, v); } else if (mine != null) await b.pollVote(pid, mine);
+          } catch { /* */ }
+          b.watchPoll(pid, ASK.options.length, (c) => { counts = c; paint(); });
+        });
+      });
     }
   }
 
@@ -1284,7 +1328,7 @@ ${url}`);
   if (location.hash.startsWith("#read-")) {
     const id = location.hash.slice(6);
     history.replaceState(null, "", location.pathname + location.search); // الرجوع يعيد إلى الصفحة
-    openArticle(id);
+    afterScripts(() => openArticle(id));
   }
   else if (/^#fw-\d+$/.test(location.hash)) {
     const n = +location.hash.slice(4);

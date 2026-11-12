@@ -173,7 +173,7 @@
   }
 
   /* ---------- كلمات العدد: كلمات متقاطعة إجاباتها في مقالات العدد ---------- */
-  let cwTimer = null;
+  let cwTimer = null, cwUnsub = null;
   function crossword() {
     keyHandler = null;
     clearInterval(cwTimer);
@@ -219,7 +219,8 @@
       <div class="cw-lists">
         <div><h3>أفقي</h3>${listHtml("a")}</div>
         <div><h3>عمودي</h3>${listHtml("d")}</div>
-      </div>`;
+      </div>
+      <div class="cw-board" id="cw-board" hidden><h3>لوحة الشرف</h3><ol id="cw-top"></ol></div>`;
 
     function paint() {
       const w = P.words[cur.w], on = new Set(cellsOf(w)), curK = cellsOf(w)[cur.k];
@@ -254,6 +255,7 @@
       const time = mmss(st.done - st.t0);
       const url = location.origin + location.pathname.replace(/[^/]*$/, "") + "games.html#cw";
       const txt = `حلّيت «كلمات العدد ${SITE.issue}» في ${SITE.name} خلال ${time}${st.hints ? ` بـ ${st.hints} تلميح` : " بلا تلميحات"}. جرّب إنت:\n${url}`;
+      setTimeout(offerSubmit, 0);
       $("#cw-win").innerHTML = `<div class="cw-win"><h2>حلّيتها!</h2><p>الوقت ${time}، ${st.hints ? `بـ ${st.hints} تلميح` : "بلا تلميحات"}.</p>
         <a class="btn gold" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">ورّي الدفعة في واتساب</a></div>`;
       paint();
@@ -353,6 +355,39 @@
       else if (e.key === "Enter") { e.preventDefault(); nextWord(); }
       else if (e.key.length === 1 && /[ء-ي]/.test(e.key)) { e.preventDefault(); input(CW.norm(e.key) || e.key); }
     };
+    // لوحة الشرف (مشتركة عبر قاعدة البيانات)
+    const bid = "cw-" + SITE.issue + "-" + skey.split(":").pop();
+    let lb = null;
+    const paintBoard = (rows) => {
+      const box = $("#cw-board");
+      if (!box) return;
+      box.hidden = false;
+      $("#cw-top").innerHTML = rows.length ? rows.map((r, i) => `<li class="${r.id === window.LIVE.device ? "me" : ""}"><span class="rk">${i + 1}</span><b>${esc(r.name)}</b><small>${mmss(r.ms)}${r.hints ? ` · ${r.hints} تلميح` : ""}</small></li>`).join("") : `<li class="none">لم يسجّل أحد بعد — كن الأول</li>`;
+    };
+    function offerSubmit() {
+      const win = $("#cw-win .cw-win");
+      if (!lb || !st.done || !win || $("#cw-sub")) return;
+      if (store.get(skey + ":sent", false)) { win.insertAdjacentHTML("beforeend", `<p class="cw-sent">نتيجتك في لوحة الشرف ✔</p>`); return; }
+      win.insertAdjacentHTML("beforeend", `<form class="cw-sub" id="cw-sub"><input id="cw-nick" maxlength="20" placeholder="اسمك في لوحة الشرف" value="${esc(store.get("cname", ""))}"><button class="btn">سجّل</button></form>`);
+      $("#cw-sub").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = $("#cw-nick").value.trim();
+        if (!name) return $("#cw-nick").focus();
+        try {
+          await lb.submitScore(bid, { name, ms: st.done - st.t0, hints: st.hints });
+          store.set(skey + ":sent", true);
+          store.set("cname", name);
+          $("#cw-sub").outerHTML = `<p class="cw-sent">سُجّلت نتيجتك ✔</p>`;
+        } catch (err) { toast(/better|أفضل|permission/i.test(err.message || "") ? "نتيجتك المسجّلة سابقًا أفضل" : "تعذّر التسجيل، حاول لاحقًا"); }
+      });
+    }
+    if (cwUnsub) { cwUnsub(); cwUnsub = null; }
+    if (window.LIVE) LIVE.ready.then((be) => {
+      if (!be || !be.watchBoard) return;
+      lb = be;
+      cwUnsub = be.watchBoard(bid, paintBoard);
+      offerSubmit();
+    });
     cwTimer = setInterval(tick, 1000);
     paint();
     if (st.done) finish();

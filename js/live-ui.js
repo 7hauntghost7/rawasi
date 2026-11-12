@@ -28,67 +28,77 @@
     if (page === "munazarat") mount(be);
   });
 
-  /* ---------- تعليقات شخصية العدد ---------- */
-  function mountThread(be) {
-    const box = $("#ps-com");
-    if (!box) return;
-    const tid = box.dataset.tid, list = $("#th-list"), wrap = $("#th-form-wrap");
-    if (!be || !be.watchThread) {
-      list.innerHTML = `<div class="chat-empty">التعليقات تُفتح قريبًا.</div>`;
-      return;
-    }
+  /* ---------- صندوق تعليقات عام (شخصية العدد والمقالات) ---------- */
+  function threadBox(be, box, tid, o = {}) {
+    const list = box.querySelector(".th-list"), wrap = box.querySelector(".th-form-wrap"), cnt = box.querySelector(".th-n");
+    if (!be || !be.watchThread) { list.innerHTML = `<div class="chat-empty">التعليقات تُفتح قريبًا.</div>`; return () => {}; }
+    const open = o.open !== false;
     const whoHtml = () => {
       const name = store.get("cname", "");
-      return name ? `تعلّق باسم <b>${esc(name)}</b> · <button type="button" id="th-chname">تغيير</button>` : `<input id="th-name" maxlength="30" placeholder="اسمك (يظهر مع تعليقك)">`;
+      return name ? `تعلّق باسم <b>${esc(name)}</b> · <button type="button" class="th-chname">تغيير</button>` : `<input class="th-name" maxlength="30" placeholder="اسمك (يظهر مع تعليقك)">`;
     };
-    wrap.innerHTML = `<form class="chat-form" id="th-form" autocomplete="off">
-      <div class="who" id="th-who">${whoHtml()}</div>
-      <div class="row"><textarea id="th-text" rows="1" maxlength="500" placeholder="اكتب له كلمة شكر…"></textarea>
+    wrap.innerHTML = open ? `<form class="chat-form" autocomplete="off">
+      <div class="who th-who">${whoHtml()}</div>
+      <div class="row"><textarea class="th-text" rows="1" maxlength="500" placeholder="${esc(o.placeholder || "اكتب تعليقك…")}"></textarea>
       <button class="send" aria-label="إرسال">${ICON_SEND}</button></div>
-    </form>`;
+    </form>` : `<p class="meta th-closed">${esc(o.closedText || "أُغلقت التعليقات")}</p>`;
     let items = [];
     const paint = (force) => {
       const near = force || list.scrollHeight - list.scrollTop - list.clientHeight < 60;
       const vis = items.filter((c) => !c.hidden);
-      $("#th-n").textContent = vis.length ? `${vis.length} تعليق` : "";
+      if (cnt) cnt.textContent = vis.length ? `${vis.length} تعليق` : "";
       list.innerHTML = vis.length
         ? vis.map((c) => `<div class="msg"><div class="mh"><b>${esc(c.name)}</b><small>${ago(c.ts)}</small></div><p>${esc(c.text)}</p></div>`).join("")
-        : `<div class="chat-empty">كن أول من يكتب له كلمة</div>`;
+        : `<div class="chat-empty">${esc(open ? o.empty || "كن أول من يعلّق" : "لا توجد تعليقات")}</div>`;
       if (near) list.scrollTop = list.scrollHeight;
     };
-    be.watchThread(tid, (c) => { items = c || []; paint(); });
-    setInterval(() => paint(), 30000);
+    const unsub = be.watchThread(tid, (c) => { items = c || []; paint(); });
+    const iv = setInterval(() => paint(), 30000);
+    let sending = false;
     box.addEventListener("click", (e) => {
-      if (!e.target.closest("#th-chname")) return;
+      if (!e.target.closest(".th-chname")) return;
       store.set("cname", "");
-      $("#th-who").innerHTML = whoHtml();
-      $("#th-name").focus();
+      box.querySelector(".th-who").innerHTML = whoHtml();
+      box.querySelector(".th-name").focus();
     });
     box.addEventListener("input", (e) => {
-      if (e.target.id === "th-text") { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px"; }
+      if (e.target.classList.contains("th-text")) { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px"; }
     });
-    let sending = false;
     box.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (sending) return;
-      const nameEl = $("#th-name"), textEl = $("#th-text");
+      const nameEl = box.querySelector(".th-name"), textEl = box.querySelector(".th-text");
       const name = (nameEl ? nameEl.value : store.get("cname", "")).trim(), text = textEl.value.trim();
       if (!name) { toast("اكتب اسمك أولًا"); if (nameEl) nameEl.focus(); return; }
       if (!text) { textEl.focus(); return; }
       sending = true;
-      const btn = $("#th-form .send");
+      const btn = box.querySelector(".send");
       btn.disabled = true;
       try {
         await be.addToThread(tid, { name, text });
         store.set("cname", name);
         textEl.value = ""; textEl.style.height = "auto";
-        $("#th-who").innerHTML = whoHtml();
+        box.querySelector(".th-who").innerHTML = whoHtml();
         setTimeout(() => paint(true), 300);
       } catch (err) { toast(nice(err)); }
       sending = false;
       btn.disabled = false;
     });
+    return () => { try { if (unsub) unsub(); } catch { /* */ } clearInterval(iv); };
   }
+
+  function mountThread(be) {
+    const box = $("#ps-com");
+    if (box) threadBox(be, box, box.dataset.tid, { placeholder: "اكتب له كلمة شكر…", empty: "كن أول من يكتب له كلمة" });
+  }
+
+  // تعليقات المقال داخل نافذة القراءة (يستدعيها app.js)
+  let artStop = null;
+  window.RAWASI_COMMENTS = (box, tid, opts) => {
+    if (artStop) { artStop(); artStop = null; }
+    LIVE.ready.then((be) => { if (box.isConnected) artStop = threadBox(be, box, tid, opts); });
+  };
+  window.RAWASI_COMMENTS_STOP = () => { if (artStop) { artStop(); artStop = null; } };
 
   /* ---------- شريط الصفحة الرئيسية ---------- */
   function homeBanner(be) {

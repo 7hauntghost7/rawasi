@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex">
   <title>مشرف المناظرة — صحيفة الرواسي</title>
   <link rel="icon" href="assets/img/brand/logo-ar-gold.png">
-  <link rel="stylesheet" href="css/style.css?v=37">
+  <link rel="stylesheet" href="css/style.css?v=39">
   <style>
     body { padding-bottom: 40px; }
     .top { position: sticky; top: 0; z-index: 10; background: rgba(250, 246, 238, .92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
@@ -56,9 +56,9 @@
   <main class="wrap mod" id="app"><div class="box msgbox">جارٍ الاتصال…</div></main>
   <div class="toast" id="toast"></div>
 
-  <script src="js/data.js?v=37"></script>
-  <script src="js/firebase-config.js?v=37"></script>
-  <script src="js/live.js?v=37"></script>
+  <script src="js/data.js?v=39"></script>
+  <script src="js/firebase-config.js?v=39"></script>
+  <script src="js/live.js?v=39"></script>
   <script>
   (() => {
     const $ = (s, r = document) => r.querySelector(s);
@@ -132,6 +132,7 @@
         </div>
         <div class="box"><h3 id="ch">💬 التعليقات</h3><div id="cms"></div></div>
         <div class="box" id="th-mod"><h3 id="thh">⭐ تعليقات شخصية العدد</h3><div id="ths"></div></div>
+        <div class="box" id="art-mod"><h3>📝 تعليقات المقالات المفتوحة</h3><div id="arts"><p class="meta">لا توجد مقالات تعليقاتها مفتوحة الآن.</p></div></div>
         <p class="mode">${be.mode === "firebase" ? "متصل بـ Firebase" : "وضع الشبكة المحلية"} · <a href="#" id="out" style="color:var(--rust)">خروج</a></p>`;
 
       const paintState = () => {
@@ -171,10 +172,24 @@
         $("#ths").innerHTML = list.length ? [...list].reverse().map((c) => `
           <div class="cm ${c.hidden ? "off" : ""}">
             <div class="tx"><b>${esc(c.name)}</b><p>${esc(c.text)}</p></div>
-            <button data-thide="${esc(c.id)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>
+            <button data-thide="${esc(c.id)}" data-tid="${esc(tid)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>
           </div>`).join("") : `<p class="meta">لا توجد تعليقات بعد.</p>`;
       });
       else $("#th-mod").hidden = true;
+      // تعليقات المقالات التي ما زالت مفتوحة
+      const days = typeof SITE !== "undefined" && SITE.commentDays != null && SITE.commentDays !== "" ? +SITE.commentDays : 2;
+      const openArts = (typeof ARTICLES !== "undefined" ? ARTICLES : []).filter((a) => Date.now() <= new Date(a.date + "T23:59:59").getTime() + days * 864e5);
+      const artData = {};
+      const paintArts = () => {
+        const rows = Object.values(artData).filter((x) => x.list.length);
+        $("#arts").innerHTML = rows.length ? rows.map(({ a, list }) => `<p style="margin:10px 0 2px;font-weight:600">«${esc(a.title)}»</p>` + [...list].reverse().map((c) => `
+          <div class="cm ${c.hidden ? "off" : ""}">
+            <div class="tx"><b>${esc(c.name)}</b><p>${esc(c.text)}</p></div>
+            <button data-thide="${esc(c.id)}" data-tid="art-${esc(a.id)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>
+          </div>`).join("")).join("") : `<p class="meta">${openArts.length ? `${openArts.length} مقال مفتوح للتعليق، ولا توجد تعليقات بعد.` : "لا توجد مقالات تعليقاتها مفتوحة الآن."}</p>`;
+      };
+      if (be.watchThread) openArts.forEach((a) => be.watchThread("art-" + a.id, (list) => { artData[a.id] = { a, list: list || [] }; paintArts(); }));
+      paintArts();
       be.watchDebate((d) => {
         const changed = !cur || !d || cur.id !== d.id;
         cur = d;
@@ -205,7 +220,7 @@
           return;
         }
         const th = e.target.closest("[data-thide]");
-        if (th) { try { await be.hideInThread(tid, th.dataset.thide, th.dataset.v === "1"); } catch (er) { toast(nice(er)); } return; }
+        if (th) { try { await be.hideInThread(th.dataset.tid || tid, th.dataset.thide, th.dataset.v === "1"); } catch (er) { toast(nice(er)); } return; }
         const h = e.target.closest("[data-hide]");
         if (h) { try { await be.hide(cur.id, h.dataset.hide, h.dataset.v === "1"); } catch (er) { toast(nice(er)); } return; }
         if (e.target.id === "out") { e.preventDefault(); await be.logout(); location.reload(); }
