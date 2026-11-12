@@ -476,13 +476,183 @@
         </div>
       </article></div>`);
   }
-  function openEmbed(id) {
-    if (!isOpen()) history.pushState({ lb: 1 }, "", location.href);
-    openModal(`<div class="rd-wrap" style="--c:#101329;--on:#f1e5cc">
-      <div class="rd-bar"><button class="rd-btn close" aria-label="إغلاق">→</button><span class="rd-club">رسالة إليك</span></div>
-      <iframe class="embed-frame" src="assets/embeds/resala-ileik.html${id ? "#" + encodeURIComponent(id) : ""}" title="رسالة إليك"></iframe>
-    </div>`, "embed");
+  /* ---------- رسالة إليك: أوراق مبعثرة، ترفع واحدة وتقرأها ---------- */
+  const RCATS = { faith: "الإيمان والروح", healing: "النفس والتعافي", relationships: "العلاقات", life: "الحياة", ambition: "النجاح والطموح", study: "الدراسة والتعلم", failure: "الفشل والخسارة", reflection: "التأمل والفكر" };
+  let rlOpenById = null;
+  function resalaSec() {
+    if (!has("RESALA") || !RESALA.length) return "";
+    const cats = [...new Set(RESALA.map((m) => m.cat))];
+    return `<section class="rl" id="resala"><div class="wrap rl-in">
+      <p class="rl-eye">مساحة صغيرة، ورسائل كثيرة</p>
+      <h2 class="rl-title">رسالة إليك</h2>
+      <p class="rl-sub">في مكان ما بين هذه الأوراق، هناك رسالة كُتبت لك.</p>
+      <div class="rl-tools">
+        <div class="rl-cats" id="rl-cats"><button type="button" class="on" data-rc="">الكل</button>${cats.map((c) => `<button type="button" data-rc="${esc(c)}">${esc(RCATS[c] || c)}</button>`).join("")}</div>
+        <div class="rl-btns"><button type="button" class="rl-rand" data-rrand>ربما هذه رسالتك ✦</button><button type="button" class="rl-rand" data-rmore>أوراق أخرى ↻</button></div>
+      </div>
+      <div class="rl-pool" id="rl-pool" aria-label="رسائل مبعثرة"></div>
+      <p class="rl-hint">حرّك الأوراق، والمس واحدة لترفعها وتقرأها</p>
+    </div></section>`;
   }
+  function bindResala() {
+    const pool = $("#rl-pool");
+    if (!pool) return;
+    const readS = new Set(store.get("rl-read", []));
+    const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let cat = "", z = 10, drag = null, cur = null, typing = null;
+
+    function scatter() {
+      pool.innerHTML = "";
+      const list = shuffle(RESALA.filter((m) => !cat || m.cat === cat)).slice(0, 10);
+      const W = pool.clientWidth, H = pool.clientHeight;
+      const cols = Math.max(2, Math.round(Math.sqrt(list.length * W / H))), rows = Math.ceil(list.length / cols);
+      const order = list.map((m, n) => n).sort(() => Math.random() - .5);
+      list.forEach((m, n) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "rl-p" + (readS.has(m.id) ? " read" : "");
+        b.dataset.id = m.id;
+        b.innerHTML = `<small>${esc(RCATS[m.cat] || "")}</small><b>${esc(m.title)}</b><i>${readS.has(m.id) ? "قُرئت" : "✧"}</i>`;
+        pool.appendChild(b);
+        const pw = b.offsetWidth, ph = b.offsetHeight, slot = order[n];
+        const cw = (W - pw) / Math.max(1, cols - 1), ch = (H - ph) / Math.max(1, rows - 1);
+        const x = (slot % cols) * cw + (Math.random() - .5) * cw * 1.1, y = Math.floor(slot / cols) * ch + (Math.random() - .5) * ch * 1.2;
+        b.style.left = Math.min(W - pw, Math.max(0, x)) + "px";
+        b.style.top = Math.min(H - ph, Math.max(0, y)) + "px";
+        b.style.setProperty("--r", (Math.random() * 18 - 9).toFixed(1) + "deg");
+        b.style.zIndex = ++z;
+      });
+    }
+
+    // سحب الأوراق (على الجوال: السحب الجانبي يحرّك الورقة، والتمرير العمودي للصفحة)
+    pool.addEventListener("pointerdown", (e) => {
+      const el = e.target.closest(".rl-p");
+      if (!el || (e.button !== undefined && e.button !== 0)) return;
+      drag = { el, x: e.clientX, y: e.clientY, l: el.offsetLeft, t: el.offsetTop, moved: false };
+      el.style.zIndex = ++z;
+      try { el.setPointerCapture(e.pointerId); } catch { /* */ }
+    });
+    pool.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 7) { drag.moved = true; drag.el.classList.add("drag"); }
+      if (!drag.moved) return;
+      drag.el.style.left = Math.max(-20, Math.min(pool.clientWidth - drag.el.offsetWidth + 20, drag.l + dx)) + "px";
+      drag.el.style.top = Math.max(-20, Math.min(pool.clientHeight - drag.el.offsetHeight + 20, drag.t + dy)) + "px";
+    });
+    const endDrag = (open) => {
+      if (!drag) return;
+      const { el, moved } = drag;
+      el.classList.remove("drag");
+      drag = null;
+      if (open && !moved) pick(el);
+    };
+    pool.addEventListener("pointerup", () => endDrag(true));
+    pool.addEventListener("pointercancel", () => endDrag(false));
+    pool.addEventListener("click", (e) => { const el = e.target.closest(".rl-p"); if (el && e.detail === 0) pick(el); }); // لوحة المفاتيح
+
+    // ترفع الورقة ثم تكبر لتصبح الرسالة
+    function pick(el) {
+      el.style.zIndex = ++z;
+      el.classList.add("lift");
+      setTimeout(() => openLetter(el.dataset.id, el), calm ? 0 : 230);
+    }
+    function reader() {
+      let ov = $("#rl-reader");
+      if (ov) return ov;
+      document.body.insertAdjacentHTML("beforeend", `<div class="rl-reader" id="rl-reader" role="dialog" aria-modal="true" aria-labelledby="rl-h">
+        <div class="rl-back"></div>
+        <article class="rl-letter">
+          <button type="button" class="rl-x" aria-label="إغلاق">×</button>
+          <div class="rl-stamp">✧</div><p class="rl-cat" id="rl-cat"></p><h3 id="rl-h"></h3>
+          <div class="rl-body" id="rl-body"></div>
+          <div class="rl-acts"><button type="button" data-rshare>مشاركة ↗</button><button type="button" data-rrand>رسالة أخرى ✦</button></div>
+          <p class="rl-sign">إليك، أينما كنت.</p>
+        </article></div>`);
+      ov = $("#rl-reader");
+      ov.addEventListener("click", (e) => {
+        if (e.target.closest(".rl-x") || e.target.classList.contains("rl-back")) closeLetter();
+        else if (e.target.closest("[data-rshare]")) shareLetter();
+      });
+      return ov;
+    }
+    function openLetter(id, el) {
+      const m = RESALA.find((x) => x.id === id);
+      if (!m) return;
+      const ov = reader(), L = $(".rl-letter", ov);
+      if (!cur) history.pushState({ lb: 1 }, "", location.href);
+      cur = { m, el };
+      readS.add(id);
+      store.set("rl-read", [...readS]);
+      $("#rl-cat").textContent = RCATS[m.cat] || "";
+      $("#rl-h").textContent = m.title;
+      const body = $("#rl-body");
+      ov.classList.add("open");
+      document.body.style.overflow = "hidden";
+      L.scrollTop = 0;
+      clearInterval(typing);
+      if (calm) body.textContent = m.body;
+      else {
+        let i = 0;
+        body.textContent = "";
+        typing = setInterval(() => { i += 3; body.textContent = m.body.slice(0, i); if (i >= m.body.length) clearInterval(typing); }, 18);
+      }
+      if (el && !calm && L.animate) {
+        const p = el.getBoundingClientRect(), r = L.getBoundingClientRect();
+        const rot = getComputedStyle(el).getPropertyValue("--r").trim() || "0deg";
+        L.animate([
+          { transform: `translate(${p.left + p.width / 2 - (r.left + r.width / 2)}px, ${p.top + p.height / 2 - (r.top + r.height / 2)}px) scale(${p.width / r.width}, ${p.height / r.height}) rotate(${rot})`, opacity: .7 },
+          { transform: "none", opacity: 1 },
+        ], { duration: 460, easing: "cubic-bezier(.2,.8,.2,1)" });
+      }
+    }
+    function closeLetter(fromPop) {
+      if (!cur) return;
+      const { el } = cur;
+      cur = null;
+      clearInterval(typing);
+      $("#rl-reader").classList.remove("open");
+      document.body.style.overflow = "";
+      if (el) {
+        el.classList.remove("lift");
+        el.classList.add("read");
+        const mark = el.querySelector("i");
+        if (mark) mark.textContent = "قُرئت";
+      }
+      if (!fromPop) history.back();
+    }
+    async function shareLetter() {
+      if (!cur) return;
+      const url = location.origin + location.pathname + "#resala-" + cur.m.id;
+      try {
+        if (navigator.share) await navigator.share({ title: cur.m.title, text: cur.m.body.slice(0, 120), url });
+        else { await copyText(url); toast("تم نسخ رابط الرسالة"); }
+      } catch { /* أُلغيت */ }
+    }
+    function randomLetter() {
+      const els = $$(".rl-p", pool);
+      if (!els.length) return;
+      const el = els[Math.floor(Math.random() * els.length)];
+      if (cur) { closeLetter(true); history.replaceState({ lb: 1 }, "", location.href); cur = null; openLetter(el.dataset.id, null); return; }
+      pick(el);
+    }
+    addEventListener("popstate", () => { if (cur) closeLetter(true); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && cur) closeLetter(); });
+    document.addEventListener("click", (e) => { if (e.target.closest("[data-rrand]")) randomLetter(); });
+    $("[data-rmore]").addEventListener("click", scatter);
+    $("#rl-cats").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-rc]");
+      if (!b) return;
+      cat = b.dataset.rc;
+      $$("#rl-cats button").forEach((x) => x.classList.toggle("on", x === b));
+      scatter();
+    });
+    let rw = innerWidth;
+    addEventListener("resize", () => { if (Math.abs(innerWidth - rw) > 40) { rw = innerWidth; scatter(); } });
+    rlOpenById = (id) => openLetter(id, null);
+    scatter();
+  }
+
   function tafsirSec() {
     if (!has("TAFSIR") || !TAFSIR.length) return "";
     return `<section class="section wrap">
@@ -580,14 +750,7 @@
           </div>
         </div>
       </section>
-      <section class="section wrap" style="padding-top:0">
-        <button type="button" class="resala-card reveal" data-embed>
-          <small>من النادي الديني</small>
-          <b>رسالة إليك</b>
-          <span>في مكان ما بين هذه الأوراق، هناك رسالة كُتبت لك.</span>
-          <em>افتح الرسائل ←</em>
-        </button>
-      </section>
+      ${resalaSec()}
       ${fawaidSec("dini", "فوائد متفرقات")}
       ${tafsirSec()}
       ${wordsSec()}`;
@@ -943,6 +1106,7 @@
   bindRawasiyat();
   bindTasbeeh();
   bindWords();
+  bindResala();
   bindPoll();
   bindGallery();
   observe();
@@ -964,7 +1128,6 @@
     }
     const cp = t.closest("[data-copy]");
     if (cp) { copyText(location.origin + location.pathname + "#read-" + cp.dataset.copy).then(() => toast("تم نسخ الرابط ✔")); return; }
-    if (t.closest("[data-embed]")) { openEmbed(); return; }
     const fw = t.closest("[data-fw]");
     if (fw) { openFawaid(+fw.dataset.fw); return; }
     const flip = t.closest(".flip");
@@ -988,10 +1151,10 @@
     history.replaceState(null, "", location.pathname + location.search); // الرجوع يعيد إلى الصفحة
     openArticle(id);
   }
-  else if (location.hash.startsWith("#resala-")) {
+  else if (location.hash.startsWith("#resala-") && rlOpenById) {
     const id = decodeURIComponent(location.hash.slice(8));
     history.replaceState(null, "", location.pathname + location.search);
-    openEmbed(id);
+    setTimeout(() => { $("#resala").scrollIntoView(); rlOpenById(id); }, 120);
   }
   else if (location.hash.length > 1) { const el = document.getElementById(location.hash.slice(1)); if (el) setTimeout(() => el.scrollIntoView(), 60); }
 })();
