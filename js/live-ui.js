@@ -126,6 +126,11 @@
     if (!sec) return;
     let cur = null, sig = "", tally = { a: 0, b: 0, claps: 0 }, comments = [], mine = null;
     let unT = null, unC = null, lastClap = 0, sending = false;
+    if (location.hash === "#live-sec") {
+      sec.hidden = false;
+      sec.innerHTML = `<div class="lv lv-loading"><div class="lv-head"><div class="lv-pills"><span class="live-pill">مناظرة</span></div><p class="lv-wait">جارٍ تحميل المناظرة…</p></div></div>`;
+      requestAnimationFrame(() => sec.scrollIntoView({ block: "start" }));
+    }
 
     be.watchDebate(async (d) => {
       const oldPoll = $("#poll");
@@ -137,7 +142,8 @@
       if (oldPoll) oldPoll.hidden = true;
       sec.hidden = false;
       const newDebate = !cur || cur.id !== d.id;
-      const newSig = JSON.stringify({ ...d, started: 0, img: (d.img || "").length + (d.img || "").slice(-40) });
+      const sd = { ...d, started: 0, img: (d.img || "").length + (d.img || "").slice(-40) };
+      const newSig = JSON.stringify(Object.keys(sd).sort().map((k) => [k, sd[k]]));
       cur = d;
       if (newDebate) {
         if (unT) unT();

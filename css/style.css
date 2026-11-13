@@ -952,3 +952,7 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .post .ph-t::after { content: ""; position: absolute; inset: auto 20px 16px; height: 3px; width: 46px; border-radius: 3px; background: var(--mustard); }
 .say.on { animation: sayPulse 1s ease-in-out infinite; }
 @keyframes sayPulse { 50% { box-shadow: 0 0 0 7px rgba(233, 171, 17, .35); } }
+
+.lv-loading .lv-head { min-height: 150px; }
+.lv-wait { margin: 18px 0 0; font-size: 16px; color: var(--sand); animation: lvWait 1.4s ease-in-out infinite; }
+@keyframes lvWait { 50% { opacity: .45; } }

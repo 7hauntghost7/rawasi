@@ -16,12 +16,12 @@
 
   /* ---------- Firebase ---------- */
   async function firebaseBackend(cfg) {
-    const [appMod, fs, au] = await Promise.all([
-      import(FB + "firebase-app.js"), import(FB + "firebase-firestore.js"), import(FB + "firebase-auth.js"),
-    ]);
+    const [appMod, fs] = await Promise.all([import(FB + "firebase-app.js"), import(FB + "firebase-firestore.js")]);
     const app = appMod.initializeApp(cfg);
     const db = fs.getFirestore(app);
-    const auth = au.getAuth(app);
+    // وحدة تسجيل الدخول للمشرف فقط، تُحمَّل عند الحاجة
+    let authP = null;
+    const getAuth = () => authP || (authP = import(FB + "firebase-auth.js").then((au) => ({ au, auth: au.getAuth(app) })));
     const { doc, collection, onSnapshot, query, orderBy, limit, runTransaction, increment, serverTimestamp, addDoc, updateDoc, setDoc, getDoc, deleteDoc } = fs;
     const cur = doc(db, "live", "current");
     const deb = (id) => doc(db, "debates", id);
@@ -55,9 +55,13 @@
       }),
       // للمشرف
       needsEmail: true,
-      login: (email, pass) => au.signInWithEmailAndPassword(auth, email, pass),
-      logout: () => au.signOut(auth),
-      onAuth: (cb) => au.onAuthStateChanged(auth, (u) => cb(!!u)),
+      login: async (email, pass) => { const { au, auth } = await getAuth(); return au.signInWithEmailAndPassword(auth, email, pass); },
+      logout: async () => { const { au, auth } = await getAuth(); return au.signOut(auth); },
+      onAuth(cb) {
+        let un = null, dead = false;
+        getAuth().then(({ au, auth }) => { if (!dead) un = au.onAuthStateChanged(auth, (u) => cb(!!u)); });
+        return () => { dead = true; if (un) un(); };
+      },
       async start(o) {
         const id = "d" + Date.now().toString(36);
         await setDoc(deb(id), { a: 0, b: 0, claps: 0 });
@@ -185,12 +189,86 @@
     };
   }
 
+  /* ---------- قراءة سريعة عبر REST قبل تحميل مكتبة Firebase ---------- */
+  function restReader(cfg) {
+    const base = `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/`;
+    const key = "key=" + encodeURIComponent(cfg.apiKey || "");
+    const val = (v) => {
+      if (!v || typeof v !== "object") return null;
+      if ("stringValue" in v) return v.stringValue;
+      if ("integerValue" in v) return Number(v.integerValue);
+      if ("doubleValue" in v) return Number(v.doubleValue);
+      if ("booleanValue" in v) return v.booleanValue;
+      if ("timestampValue" in v) return v.timestampValue;
+      if ("arrayValue" in v) return (v.arrayValue.values || []).map(val);
+      if ("mapValue" in v) return obj(v.mapValue.fields);
+      return null;
+    };
+    const obj = (f) => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, val(v)]));
+    const get = async (path, fields) => {
+      const mask = fields ? fields.map((f) => "&mask.fieldPaths=" + f).join("") : "";
+      const r = await fetch(base + path + "?" + key + mask);
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error("rest " + r.status);
+      return obj((await r.json()).fields);
+    };
+    const comments = async (id) => {
+      const r = await fetch(base + "debates/" + encodeURIComponent(id) + ":runQuery?" + key, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "comments" }], orderBy: [{ field: { fieldPath: "ts" }, direction: "DESCENDING" }], limit: 80 } }),
+      });
+      if (!r.ok) throw new Error("rest " + r.status);
+      return (await r.json()).filter((x) => x.document).map((x) => {
+        const d = obj(x.document.fields);
+        return { id: x.document.name.split("/").pop(), ...d, ts: Date.parse(d.ts) || Date.now() };
+      }).reverse();
+    };
+    return { get, comments };
+  }
+
+  // واجهة جاهزة فورًا: تعرض بيانات REST أولًا، ثم يتولى الاتصال المباشر عند اكتمال تحميله
+  function fastFirebase(cfg) {
+    const realP = firebaseBackend(cfg);
+    realP.catch((e) => console.warn("[live] Firebase:", e));
+    const rest = restReader(cfg);
+    // النص أولًا (بلا الملصق، حجمه صغير جدًا) ثم الوثيقة كاملة بالملصق
+    const TEXT = ["id", "motion", "sideA", "sideB", "membersA", "membersB", "kind", "when", "place", "link", "status"];
+    const textP = rest.get("live/current", TEXT), fullP = rest.get("live/current");
+    textP.catch(() => {}); fullP.catch(() => {});
+    const early = {
+      watchDebate: (args, emit) => {
+        let full = false;
+        textP.then((d) => { if (!full) emit(d ? { ...d, img: "" } : null); }).catch(() => {});
+        return fullP.then((d) => { full = true; return d; });
+      },
+      watchTally: ([id]) => rest.get("debates/" + encodeURIComponent(id)).then((d) => d || { a: 0, b: 0, claps: 0 }),
+      watchComments: ([id]) => rest.comments(id),
+    };
+    const watcher = (prop) => (...args) => {
+      const cb = args[args.length - 1];
+      let live = false, dead = false, un = null;
+      const fwd = [...args.slice(0, -1), (x) => { live = true; if (!dead) cb(x); }];
+      const emit = (x) => { if (!live && !dead) cb(x); };
+      if (early[prop]) early[prop](args, emit).then(emit).catch(() => {});
+      realP.then((b) => { if (!dead) un = b[prop](...fwd); }).catch(() => {});
+      return () => { dead = true; if (un) un(); };
+    };
+    const fixed = { mode: "firebase", device, needsEmail: true };
+    return new Proxy({}, {
+      get(_, prop) {
+        if (typeof prop !== "string" || prop === "then") return undefined;
+        if (prop in fixed) return fixed[prop];
+        if (prop === "onAuth" || prop === "login") import(FB + "firebase-auth.js").catch(() => {}); // تحميل مبكر للمشرف
+        if (prop.startsWith("watch") || prop === "onAuth") return watcher(prop);
+        return (...a) => realP.then((b) => b[prop](...a));
+      },
+    });
+  }
+
   /* ---------- الاختيار التلقائي ---------- */
   async function pick() {
     const cfg = window.RAWASI_FIREBASE;
-    if (cfg && cfg.projectId) {
-      try { return await firebaseBackend(cfg); } catch (e) { console.warn("[live] Firebase:", e); }
-    }
+    if (cfg && cfg.projectId && typeof Proxy !== "undefined") return fastFirebase(cfg);
     if (location.protocol.startsWith("http")) {
       try {
         const r = await fetch("/api/live/state?t=" + Date.now());
