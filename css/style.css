@@ -874,3 +874,76 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .cw-sub { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
 .cw-sub input { flex: 1; max-width: 220px; min-width: 0; font: inherit; font-size: 16px; border: 0; border-radius: 12px; padding: 8px 12px; }
 .cw-sent { margin: 10px 0 0; font-weight: 600; }
+
+/* ---------- النادي الأدبي: عبارة اليوم / كيف تقولها / من كتاب ---------- */
+.say { width: 40px; height: 40px; flex-shrink: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--brown); color: var(--gold); cursor: pointer; }
+.say svg { width: 20px; height: 20px; }
+.say:active { transform: scale(.92); }
+.flip.idm, .flip.idm .in { min-height: 250px; }
+.flip.idm .f { align-items: center; text-align: center; }
+.flip.idm .f h4 { font-family: var(--f-ui); font-weight: 700; font-size: 28px; line-height: 1.3; }
+.flip.idm .f .say { background: var(--gold); color: var(--brown); }
+.flip.idm .f em { font-style: normal; font-size: 12.5px; opacity: .75; }
+.flip.idm .b { text-align: center; align-items: center; }
+.flip.idm .b b { font-size: 24px; }
+.flip.idm .b p { margin: 4px 0 0; font-size: 15px; font-weight: 500; line-height: 1.6; }
+.sh-list { border-top: 1.5px solid var(--line); }
+.sh-row { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1.5px solid var(--line); }
+.sh-lang { width: 78px; flex-shrink: 0; font-size: 13px; color: var(--ink-soft); font-weight: 500; }
+.sh-word { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sh-word b { font-size: 19px; font-weight: 600; color: var(--ink); text-align: right; }
+.sh-word small { font-size: 13.5px; color: var(--teal); font-weight: 500; }
+.sh-note { margin-top: 10px; font-size: 12px; }
+.bk-sub { font-family: var(--f-head); font-weight: 400; font-size: 22px; color: var(--brown); margin: 18px 0 10px; }
+.bk-chars { display: grid; gap: 12px; }
+@media (min-width: 760px) { .bk-chars { grid-template-columns: 1fr 1fr; } }
+.bk-char { background: var(--paper-2); border-radius: var(--radius); padding: 18px; }
+.bk-from { font-size: 12.5px; color: var(--rust); font-weight: 600; }
+.bk-char h4, .bk-rec h4 { font-family: var(--f-head); font-weight: 400; font-size: 26px; margin: 2px 0 6px; color: var(--brown); }
+.bk-char p { margin: 0; font-family: var(--f-body); font-size: 19px; line-height: 1.6; }
+.bk-char .bk-fact { margin-top: 10px; font-family: var(--f-ui); font-size: 13.5px; line-height: 1.7; color: var(--ink-soft); border-top: 1.5px dashed var(--line); padding-top: 10px; }
+.bk-fact b { color: var(--teal); }
+.bk-quotes { display: grid; gap: 12px; }
+.bk-q { background: var(--brown); color: var(--paper); border-radius: var(--radius); overflow: hidden; }
+.bk-q summary { list-style: none; cursor: pointer; padding: 20px 18px 16px; display: flex; flex-direction: column; gap: 4px; }
+.bk-q summary::-webkit-details-marker { display: none; }
+.bk-qt { margin: 0; font-family: var(--f-body); font-size: 26px; line-height: 1.4; color: var(--gold); }
+.bk-orig { margin: 0; font-size: 13.5px; opacity: .7; font-style: italic; }
+.bk-q small { font-size: 13px; color: var(--sand); }
+.bk-more { align-self: flex-start; margin-top: 8px; font-size: 12.5px; font-weight: 600; background: rgba(255,255,255,.1); border-radius: 999px; padding: 4px 12px; }
+.bk-more::after { content: " ▾"; }
+.bk-q[open] .bk-more::after { content: " ▴"; }
+.bk-body { background: var(--paper-2); color: var(--ink); padding: 16px 18px 18px; font-size: 15px; line-height: 1.8; }
+.bk-body p { margin: 0 0 10px; }
+.bk-body b { color: var(--brown); }
+.bk-body ol { margin: 6px 0 0; padding-inline-start: 20px; }
+.bk-body li { margin-bottom: 6px; }
+.bk-recs { display: grid; gap: 12px; }
+.bk-rec { border-inline-start: 4px solid var(--mustard); padding: 4px 14px; }
+.bk-rec p { margin: 4px 0; font-size: 15px; }
+.bk-rec small { color: var(--ink-soft); }
+#min-kitab .rd-cta { border-radius: var(--radius); margin-top: 20px; }
+
+/* ---------- منشورات النادي: ملصقات مربعة تُسحب أفقيًا ---------- */
+.posts { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -20px; padding: 4px 20px 10px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.posts::-webkit-scrollbar { display: none; }
+.post { flex: 0 0 74%; max-width: 300px; scroll-snap-align: start; cursor: pointer; outline: none; }
+.post .ph { aspect-ratio: 1; border-radius: 20px; overflow: hidden; background: var(--c); color: var(--on); display: grid; place-items: center; box-shadow: 0 8px 22px rgba(46, 17, 9, .14); transition: transform .2s; }
+.post .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.post .ph .gl { font-size: 90px; }
+.post:active .ph { transform: scale(.98); }
+.post:focus-visible .ph { outline: 3px solid var(--mustard); outline-offset: 3px; }
+.post .kick { margin-top: 12px; }
+.post .kick b { color: var(--rust); }
+.post .kick b + span::before { content: "✦"; }
+.post .kick span:first-child::before { content: none; }
+.post h3 { font-family: var(--f-ui); font-size: 16.5px; font-weight: 600; line-height: 1.55; margin: 2px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (min-width: 760px) {
+  .posts { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; overflow: visible; margin: 0; padding: 0; }
+  .post { max-width: none; }
+  .post:hover .ph { transform: translateY(-3px); }
+}
+.post .ph-t { place-items: stretch; display: flex; flex-direction: column; justify-content: space-between; padding: 22px 20px; text-align: right; position: relative; }
+.post .ph-t .gl { font-size: 46px; opacity: .9; }
+.post .ph-t b { font-family: var(--f-head); font-weight: 400; font-size: 27px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.post .ph-t::after { content: ""; position: absolute; inset: auto 20px 16px; height: 3px; width: 46px; border-radius: 3px; background: var(--mustard); }

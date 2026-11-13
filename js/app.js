@@ -439,11 +439,12 @@
   /* ---------- قائمة مقالات مع تبويبات ---------- */
   function articleList(list, id) {
     if (!list.length) return `<p class="meta">لا توجد مواد منشورة بعد — كن أول من يشارك!</p>`;
-    const types = [...new Set(list.map((a) => a.type))];
-    const tabs = types.length > 1
-      ? `<div class="tabs" data-tabs="${id}"><button class="on" data-t="">الكل</button>${types.map((t) => `<button data-t="${esc(t)}">${esc(t)}</button>`).join("")}</div>`
-      : "";
-    return `${tabs}<div class="grid g3" id="${id}">${list.map(card).join("")}</div>`;
+    const post = (a) => `<article class="post" data-read="${a.id}" tabindex="0" style="${tone(club(a.club))}">
+      ${a.img ? `<div class="ph"><img src="${a.img}" alt="" loading="lazy"></div>` : `<div class="ph ph-t">${glyph(a.club)}<b>${esc(a.title)}</b></div>`}
+      <span class="kick">${a.type ? `<b>${esc(a.type)}</b>` : ""}<span>${ago(a.date)}</span></span>
+      ${a.img ? `<h3>${esc(a.title)}</h3>` : ""}
+    </article>`;
+    return `<div class="posts reveal" id="${id}">${list.map(post).join("")}</div>`;
   }
   function bindTabs(id, list) {
     const bar = $(`[data-tabs="${id}"]`);
@@ -759,6 +760,95 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
     step();
   }
 
+  /* ---------- النادي الأدبي: عبارة اليوم، كيف تقولها، من كتاب ---------- */
+  const dayNo = () => { const d = new Date(); return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5); };
+  const SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
+  const sayBtn = (text, lang, label) => `<button type="button" class="say" data-say="${esc(text)}" data-lang="${esc(lang)}" aria-label="${esc(label || "استمع")}">${SPEAKER}</button>`;
+  function idiomSec() {
+    if (!has("IDIOMS") || !IDIOMS.length) return "";
+    const i = dayNo() % IDIOMS.length, x = IDIOMS[i];
+    return `<section class="section wrap" id="idiom">
+      ${secHead("Idiom of the day")}
+      <p class="meta" style="margin-top:-8px">عبارة إنجليزية جديدة كل يوم. اضغط على البطاقة لتعرف معناها.</p>
+      <div class="flip idm reveal" tabindex="0">
+        <div class="in">
+          <div class="f"><small>عبارة اليوم · ${i + 1} من ${IDIOMS.length}</small><h4 dir="ltr" lang="en">${esc(x.idiom)}</h4>${sayBtn(x.idiom, "en-GB", "استمع للنطق")}<em>اضغط لتقلب البطاقة</em></div>
+          <div class="b"><b>${esc(x.meaning)}</b>${x.example ? `<p dir="ltr" lang="en">“${esc(x.example)}”</p>` : ""}</div>
+        </div>
+      </div>
+    </section>`;
+  }
+  const sayRows = (p) => (p.rows || []).map((r) => { const [lang, code, text, say] = String(r).split("|").map((v) => (v || "").trim()); return { lang, code, text, say }; }).filter((r) => r.text);
+  function sayhowSec() {
+    if (!has("SAYHOW") || !SAYHOW.length) return "";
+    return `<section class="section wrap" id="sayhow">
+      ${secHead("كيف تقولها؟")}
+      <p class="meta" style="margin-top:-8px">اختر العبارة، واضغط على السماعة لتسمع نطقها.</p>
+      <div class="tabs sh-tabs">${SAYHOW.map((p, i) => `<button type="button" class="${i ? "" : "on"}" data-sh="${i}">${esc(p.phrase)}</button>`).join("")}</div>
+      <div class="sh-list reveal" id="sh-list"></div>
+      <p class="meta sh-note">الصوت من جهازك نفسه، وقد لا تتوفر بعض اللغات على كل الهواتف.</p>
+    </section>`;
+  }
+  function bindSayhow() {
+    const box = $("#sh-list");
+    if (!box) return;
+    const show = (i) => {
+      $$("[data-sh]").forEach((b) => b.classList.toggle("on", +b.dataset.sh === i));
+      box.innerHTML = sayRows(SAYHOW[i]).map((r) => `<div class="sh-row">
+        <span class="sh-lang">${esc(r.lang)}</span>
+        <span class="sh-word"><b lang="${esc(r.code)}" dir="auto">${esc(r.text)}</b>${r.say ? `<small>${esc(r.say)}</small>` : ""}</span>
+        ${r.code ? sayBtn(r.text, r.code, "استمع بـ" + r.lang) : ""}
+      </div>`).join("");
+    };
+    document.addEventListener("click", (e) => { const b = e.target.closest("[data-sh]"); if (b) show(+b.dataset.sh); });
+    show(0);
+  }
+  function speak(text, lang) {
+    const synth = window.speechSynthesis;
+    if (!synth || typeof SpeechSynthesisUtterance === "undefined") { toast("متصفحك لا يدعم النطق الصوتي"); return; }
+    const pre = lang.toLowerCase().split("-")[0];
+    const voices = synth.getVoices();
+    const v = voices.find((x) => x.lang.replace("_", "-").toLowerCase() === lang.toLowerCase()) || voices.find((x) => x.lang.replace("_", "-").toLowerCase().startsWith(pre));
+    if (voices.length && !v) { toast("صوت هذه اللغة غير متوفر على جهازك"); return; }
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; u.rate = 0.85;
+    if (v) u.voice = v;
+    synth.speak(u);
+  }
+  if (window.speechSynthesis) try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); } catch {}
+
+  function bookSec() {
+    const chars = has("BOOK_CHARS") ? BOOK_CHARS : [], quotes = has("BOOK_QUOTES") ? BOOK_QUOTES : [], recs = has("BOOK_RECS") ? BOOK_RECS : [];
+    if (!chars.length && !quotes.length && !recs.length) return "";
+    return `<section class="section wrap" id="min-kitab">
+      ${secHead("مِن كتاب")}
+      <p class="meta" style="margin-top:-8px">شخصيات عاشت في الكتب، واقتباسات اختلف الناس في فهمها.</p>
+      ${chars.length ? `<h3 class="bk-sub">شخصيات</h3>
+      <div class="bk-chars">${chars.map((c) => `<article class="bk-char reveal">
+        <span class="bk-from">${esc(c.book)}${c.author ? ` · ${esc(c.author)}` : ""}${c.year ? ` · ${esc(c.year)}` : ""}</span>
+        <h4>${esc(c.name)}</h4>
+        <p>${esc(c.about)}</p>
+        ${c.fact ? `<p class="bk-fact"><b>هل تعلم؟</b> ${esc(c.fact)}</p>` : ""}
+      </article>`).join("")}</div>` : ""}
+      ${quotes.length ? `<h3 class="bk-sub">اقتباسات أثارت الجدل</h3>
+      <div class="bk-quotes">${quotes.map((q) => `<details class="bk-q reveal">
+        <summary><p class="bk-qt">«${esc(q.quote)}»</p>${q.original ? `<p class="bk-orig" dir="auto">${esc(q.original)}</p>` : ""}<small>${esc(q.who)}${q.work ? ` — ${esc(q.work)}` : ""}</small><span class="bk-more">القصة وكيف فهمها الناس</span></summary>
+        <div class="bk-body">
+          ${q.story ? `<p>${esc(q.story)}</p>` : ""}
+          ${(q.readings || []).length ? `<b>قراءات مختلفة:</b><ol>${q.readings.map((r) => `<li>${esc(r)}</li>`).join("")}</ol>` : ""}
+        </div>
+      </details>`).join("")}</div>` : ""}
+      ${recs.length ? `<h3 class="bk-sub">ترشيحات</h3>
+      <div class="bk-recs">${recs.map((r) => `<article class="bk-rec reveal">
+        <h4>${esc(r.title)}</h4><span class="bk-from">${esc(r.author || "")}</span>
+        ${r.why ? `<p>${esc(r.why)}</p>` : ""}${r.by ? `<small>رشّحه: ${esc(r.by)}</small>` : ""}
+      </article>`).join("")}</div>` : ""}
+      <div class="rd-cta"><b>قرأت كتابًا يستحق؟</b><span>رشّحه للدفعة، أو اكتب عن شخصية أو اقتباس أحببته.</span>
+        <a class="btn" ${SITE.submitUrl !== "#" ? `href="${SITE.submitUrl}" target="_blank" rel="noopener"` : `href="#" data-soon`}>أرسل ترشيحك</a></div>
+    </section>`;
+  }
+
   /* ---------- إضافات خاصة بكل نادٍ ---------- */
   const EXTRAS = {
     adabi: () => `
@@ -775,7 +865,10 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
           <div class="no"><b>ولا تقل</b><span>${esc(q.wrong)}</span></div>
           ${q.note ? `<small>${esc(q.note)}</small>` : ""}
         </div>`).join("")}</div>
-      </section>`,
+      </section>
+      ${idiomSec()}
+      ${sayhowSec()}
+      ${bookSec()}`,
 
     ilmi: () => `
       ${newsSec()}
@@ -1271,6 +1364,7 @@ ${url}`);
   bindRawasiyat();
   bindTasbeeh();
   bindWords();
+  bindSayhow();
   bindResala();
   bindPoll();
   bindGallery();
@@ -1309,6 +1403,8 @@ ${url}`);
     if (fws) { shareFawaid(+fws.dataset.fwshare); return; }
     const fw = t.closest("[data-fw]");
     if (fw) { openFawaid(+fw.dataset.fw); return; }
+    const sy = t.closest("[data-say]");
+    if (sy) { speak(sy.dataset.say, sy.dataset.lang); return; }
     const flip = t.closest(".flip");
     if (flip) { flip.classList.toggle("on"); return; }
     const r = t.closest("[data-read]");
