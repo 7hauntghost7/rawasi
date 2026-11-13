@@ -837,7 +837,10 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .lv-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .lv-kind { font-size: 12.5px; font-weight: 600; color: var(--gold); border: 1px solid rgba(255, 204, 94, .5); border-radius: 999px; padding: 3px 12px; }
 .lv-when { margin: 4px 0 0; font-size: 14px; color: var(--sand); }
-.lv-join { margin-top: 12px; }
+.lv-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.lv-join { margin: 0; }
+.lv-share { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid rgba(255, 204, 94, .6); background: rgba(255, 255, 255, .08); color: var(--gold); border-radius: 999px; padding: 9px 18px; font: 600 14.5px var(--f-ui); cursor: pointer; }
+.lv-share:active { transform: scale(.97); }
 .lv.is-soon .live-pill { background: var(--gold); color: var(--brown); }
 .lv-teams { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: stretch; margin-bottom: 14px; }
 .lv-team { border-radius: 16px; padding: 12px 10px; text-align: center; }

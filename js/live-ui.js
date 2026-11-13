@@ -118,6 +118,8 @@
     });
   }
 
+  const ICON_SHARE = '<svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>';
+
   /* ---------- صفحة المناظرات ---------- */
   function mount(be) {
     const sec = $("#live-sec");
@@ -185,7 +187,10 @@
             <h2 class="live-motion">«${esc(cur.motion)}»</h2>
             ${when || cur.place ? `<p class="lv-when">${[when, cur.place].filter(Boolean).map(esc).join(" ✦ ")}</p>` : ""}
             <span class="lv-count" id="lv-count"></span>
-            ${link && st !== "closed" ? `<a class="btn gold lv-join" href="${esc(link)}" target="_blank" rel="noopener">${joinLabel(link)}</a>` : ""}
+            <div class="lv-acts">
+              ${link && st !== "closed" ? `<a class="btn gold lv-join" href="${esc(link)}" target="_blank" rel="noopener">${joinLabel(link)}</a>` : ""}
+              <button type="button" class="lv-share" id="lv-share">${ICON_SHARE}${st === "closed" ? "شارك النتيجة" : "شارك المناظرة"}</button>
+            </div>
           </div>
           <div class="lv-body">
             <div class="lv-teams">${teamHtml("a")}<span class="lv-vs">ضد</span>${teamHtml("b")}</div>
@@ -254,7 +259,28 @@
       if (nearBottom) box.scrollTop = box.scrollHeight;
     }
 
+    async function shareDebate() {
+      const url = new URL("live/", location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "")).href;
+      const when = whenText(cur.when);
+      const text = cur.status === "soon" ? `مناظرة قادمة: «${cur.motion}»${when ? "\n" + when : ""}`
+        : cur.status === "live" ? `المناظرة مباشرة الآن: «${cur.motion}»\nصوّت وعلّق معنا`
+        : `نتيجة المناظرة: «${cur.motion}»`;
+      try {
+        if (navigator.share) { await navigator.share({ title: "مناظرات الرواسي", text, url }); return; }
+      } catch (err) { if (err && err.name === "AbortError") return; }
+      const full = text + "\n" + url;
+      try { await navigator.clipboard.writeText(full); }
+      catch {
+        const t = document.createElement("textarea");
+        t.value = full; t.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(t); t.select();
+        try { document.execCommand("copy"); } catch {}
+        t.remove();
+      }
+      toast("تم نسخ رابط المناظرة ✔");
+    }
+
     sec.addEventListener("click", (e) => {
+      if (e.target.closest("#lv-share")) { if (cur) shareDebate(); return; }
       if (!cur || cur.status !== "live") return;
       const vb = e.target.closest(".vb");
       if (vb) {
