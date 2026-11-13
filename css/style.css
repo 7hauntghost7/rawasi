@@ -947,3 +947,5 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .post .ph-t .gl { font-size: 46px; opacity: .9; }
 .post .ph-t b { font-family: var(--f-head); font-weight: 400; font-size: 27px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .post .ph-t::after { content: ""; position: absolute; inset: auto 20px 16px; height: 3px; width: 46px; border-radius: 3px; background: var(--mustard); }
+.say.on { animation: sayPulse 1s ease-in-out infinite; }
+@keyframes sayPulse { 50% { box-shadow: 0 0 0 7px rgba(233, 171, 17, .35); } }

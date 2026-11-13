@@ -8,3 +8,4 @@ live.json.tmp
 concept.html
 firestore.rules
 __pycache__/
+make_audio.py

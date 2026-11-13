@@ -786,7 +786,7 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
       <p class="meta" style="margin-top:-8px">اختر العبارة، واضغط على السماعة لتسمع نطقها.</p>
       <div class="tabs sh-tabs">${SAYHOW.map((p, i) => `<button type="button" class="${i ? "" : "on"}" data-sh="${i}">${esc(p.phrase)}</button>`).join("")}</div>
       <div class="sh-list reveal" id="sh-list"></div>
-      <p class="meta sh-note">الصوت من جهازك نفسه، وقد لا تتوفر بعض اللغات على كل الهواتف.</p>
+      <p class="meta sh-note">النطق بصوت آلي، للتقريب وليس بديلًا عن متحدث أصلي.</p>
     </section>`;
   }
   function bindSayhow() {
@@ -803,7 +803,21 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
     document.addEventListener("click", (e) => { const b = e.target.closest("[data-sh]"); if (b) show(+b.dataset.sh); });
     show(0);
   }
-  function speak(text, lang) {
+  // ملفات النطق في assets/audio (تُولَّد بـ make_audio.py)، وصوت الجهاز احتياط
+  const audioName = (text, lang) => lang.split("-")[0].toLowerCase() + "-" + [...text].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7).toString(36) + ".mp3";
+  let player;
+  function speak(text, lang, btn) {
+    if (player) { player.pause(); player.onerror = null; }
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    $$(".say.on").forEach((b) => b.classList.remove("on"));
+    player = new Audio("assets/audio/" + audioName(text, lang));
+    const a = player;
+    if (btn) btn.classList.add("on");
+    a.onended = a.onpause = () => btn && btn.classList.remove("on");
+    a.onerror = () => { if (a === player) { btn && btn.classList.remove("on"); speakDevice(text, lang); } };
+    a.play().catch((e) => { if (e && e.name === "NotSupportedError" && a === player) { a.onerror = null; btn && btn.classList.remove("on"); speakDevice(text, lang); } });
+  }
+  function speakDevice(text, lang) {
     const synth = window.speechSynthesis;
     if (!synth || typeof SpeechSynthesisUtterance === "undefined") { toast("متصفحك لا يدعم النطق الصوتي"); return; }
     const pre = lang.toLowerCase().split("-")[0];
@@ -1404,7 +1418,7 @@ ${url}`);
     const fw = t.closest("[data-fw]");
     if (fw) { openFawaid(+fw.dataset.fw); return; }
     const sy = t.closest("[data-say]");
-    if (sy) { speak(sy.dataset.say, sy.dataset.lang); return; }
+    if (sy) { speak(sy.dataset.say, sy.dataset.lang, sy); return; }
     const flip = t.closest(".flip");
     if (flip) { flip.classList.toggle("on"); return; }
     const r = t.closest("[data-read]");
