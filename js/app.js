@@ -223,7 +223,7 @@
   const num = (n) => Number(n).toLocaleString("ar-SD-u-nu-latn");
 
   function readMins(a) {
-    const words = [a.excerpt, ...(a.body || []), ...(a.poem || []).flat()].join(" ").split(/\s+/).filter(Boolean).length;
+    const words = [a.excerpt, ...(a.body || []).filter((p) => !String(p).startsWith("img:")), ...(a.poem || []).flat()].join(" ").split(/\s+/).filter(Boolean).length;
     return Math.max(1, Math.round(words / 180));
   }
 
@@ -236,6 +236,8 @@
       return `<div class="split"><div class="ok"><b>قل</b><span>${clean(qul[1])}</span></div><div class="no"><b>ولا تقل</b><span>${clean(qul[2])}</span></div>${qul[3] ? `<small>${esc(qul[3])}</small>` : ""}</div>`;
     }
     if (/^\(.*\)$/.test(raw)) return `<p class="rd-note">${esc(raw.slice(1, -1))}</p>`;
+    if (raw.startsWith("## ")) return `<h2 class="rd-h">${esc(raw.slice(3))}</h2>`;
+    if (/^img:assets\/[\w\/.-]+$/.test(raw)) return `<figure class="rd-fig"><img src="${esc(raw.slice(4))}" alt="" loading="lazy"></figure>`;
     let h = esc(raw)
       .replace(/﴿([^﴾]+)﴾/g, '<span class="rd-ayah">﴿$1﴾</span>')
       .replace(/صفحة الألعاب/g, '<a href="games.html">صفحة الألعاب</a>')
@@ -863,6 +865,63 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
     </section>`;
   }
 
+  /* ---------- النادي التراثي: حكيم الحلة، فهمت شنو، الرزنامة ---------- */
+  function hakimSec() {
+    if (!has("HAKIM") || !(HAKIM.words || []).length) return "";
+    return `<section class="section wrap" id="hakim">
+      <div class="hk-top reveal">
+        ${HAKIM.img ? `<img src="${esc(HAKIM.img)}" alt="" loading="lazy">` : ""}
+        <div><small>سلسلة «كلمة قصاد كلمة»</small><h2>${esc(HAKIM.title)}</h2><p>${esc(HAKIM.subtitle || "")}</p></div>
+      </div>
+      <div class="hk-list">${HAKIM.words.map((r) => { const [sd, ar, en] = String(r).split("|").map((v) => (v || "").trim()); return { sd, ar, en }; }).filter((w) => w.sd).map((w) => `<div class="hk-row reveal">
+        <b>${esc(w.sd)}</b>
+        <span class="hk-ar">${esc(w.ar || "")}</span>
+        <span class="hk-en" dir="ltr" lang="en">${esc(w.en)}</span>
+      </div>`).join("")}</div>
+    </section>`;
+  }
+  function fahimtSec() {
+    if (!has("FAHIMT") || !(FAHIMT.items || []).length) return "";
+    return `<section class="section wrap" id="fahimt">
+      ${secHead(FAHIMT.question || "فهمت شنو؟")}
+      <p class="meta" style="margin-top:-8px">اقرأ الأبيات، وقل لنا: ما معنى الكلمات المكتوبة تحت كل صورة؟</p>
+      <div class="fh-row">${FAHIMT.items.map((it, i) => `<figure class="fh">
+        <img src="${esc(it.img)}" alt="" loading="lazy">
+        <figcaption>${(it.words || []).map((w) => `<span>${esc(w)}</span>`).join("")}</figcaption>
+      </figure>`).join("")}</div>
+      <div class="ps-com fh-com" data-thread="art-fahimt-${esc(FAHIMT.id || "1")}" data-ph="اكتب ما فهمته من الكلمات…" data-empty="كن أول من يجاوب">
+        <div class="chat-head"><b>إجاباتكم</b><span class="meta th-n"></span></div>
+        <div class="chat-list th-list"><div class="chat-empty">…</div></div>
+        <div class="th-form-wrap"></div>
+      </div>
+    </section>`;
+  }
+  function ruznamaSec() {
+    if (!has("RUZNAMA") || !(RUZNAMA.seasons || []).length) return "";
+    const pane = (se, i) => `<div class="rz-pane" data-rzp="${i}" ${i ? "hidden" : ""}>
+      ${se.intro ? `<p class="rz-intro">${esc(se.intro)}</p>` : ""}
+      <ol class="rz-list">${(se.items || []).map((x) => `<li>
+        <div class="rz-h"><b>${esc(x.name)}</b>${x.when ? `<span>${esc(x.when)}</span>` : ""}</div>
+        <p>${esc(x.text)}</p>
+      </li>`).join("")}</ol>
+      ${se.note ? `<p class="rz-note">${esc(se.note)}</p>` : ""}
+    </div>`;
+    return `<section class="section wrap" id="ruznama">
+      <div class="rz reveal">
+        <div class="rz-head"><small>${esc(RUZNAMA.intro || "")}</small><h2>${esc(RUZNAMA.title)}</h2>
+          <div class="rz-tabs">${RUZNAMA.seasons.map((se, i) => `<button type="button" class="${i ? "" : "on"}" data-rz="${i}">${esc(se.label || se.name)}</button>`).join("")}</div>
+        </div>
+        ${RUZNAMA.seasons.map(pane).join("")}
+      </div>
+    </section>`;
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-rz]");
+    if (!b) return;
+    $$("[data-rz]").forEach((x) => x.classList.toggle("on", x === b));
+    $$("[data-rzp]").forEach((x) => { x.hidden = x.dataset.rzp !== b.dataset.rz; });
+  });
+
   /* ---------- إضافات خاصة بكل نادٍ ---------- */
   const EXTRAS = {
     adabi: () => `
@@ -956,7 +1015,10 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
     },
 
     turathi: () => `
-      <section class="section wrap reveal" style="padding-top:0">
+      ${hakimSec()}
+      ${ruznamaSec()}
+      ${fahimtSec()}
+      <section class="section wrap reveal">
         ${secHead("رحلتي إلى…")}
         <div class="panel"><div class="trips">${TRIPS.map((t, i) => `<div class="trip ${t.done ? "done" : ""}" ${t.done && t.article ? `data-read="${t.article}" tabindex="0"` : ""}>
           <div class="pin">${i + 1}</div><b>${esc(t.city)}</b><small>${esc(t.state)}</small>
@@ -1024,7 +1086,7 @@ ${url}`);
         <a class="btn rd-wa" href="${wa}" target="_blank" rel="noopener">شارك في واتساب</a>
         <button type="button" class="btn ghost" data-psshare>مشاركة</button>
       </div>
-      <div class="ps-com" id="ps-com" data-tid="persona-${esc(p.issue)}">
+      <div class="ps-com" id="ps-com" data-thread="persona-${esc(p.issue)}" data-ph="اكتب له كلمة شكر…" data-empty="كن أول من يكتب له كلمة">
         <div class="chat-head"><b>اكتب له كلمة</b><span class="meta th-n"></span></div>
         <div class="chat-list th-list"><div class="chat-empty">…</div></div>
         <div class="th-form-wrap"></div>

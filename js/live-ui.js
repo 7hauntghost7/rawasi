@@ -22,7 +22,7 @@
   const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 
   LIVE.ready.then((be) => {
-    if (page === "rawasiyat") mountThread(be);
+    mountThread(be);
     if (!be) return;
     if (page === "home") homeBanner(be);
     if (page === "munazarat") mount(be);
@@ -87,9 +87,10 @@
     return () => { try { if (unsub) unsub(); } catch { /* */ } clearInterval(iv); };
   }
 
+  // كل صندوق تعليقات ثابت في الصفحة: <div data-thread="المعرّف" data-ph="…" data-empty="…">
   function mountThread(be) {
-    const box = $("#ps-com");
-    if (box) threadBox(be, box, box.dataset.tid, { placeholder: "اكتب له كلمة شكر…", empty: "كن أول من يكتب له كلمة" });
+    document.querySelectorAll("[data-thread]").forEach((box) =>
+      threadBox(be, box, box.dataset.thread, { placeholder: box.dataset.ph, empty: box.dataset.empty }));
   }
 
   // تعليقات المقال داخل نافذة القراءة (يستدعيها app.js)

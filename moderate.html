@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/img/brand/logo-ar-gold.png">
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=46">
+  <link rel="stylesheet" href="css/style.css?v=47">
   <style>
     body { padding-bottom: 40px; }
     .top { position: sticky; top: 0; z-index: 10; background: rgba(250, 246, 238, .92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
@@ -58,9 +58,9 @@
   <main class="wrap mod" id="app"><div class="box msgbox">جارٍ الاتصال…</div></main>
   <div class="toast" id="toast"></div>
 
-  <script src="js/data.js?v=46"></script>
-  <script src="js/firebase-config.js?v=46"></script>
-  <script src="js/live.js?v=46"></script>
+  <script src="js/data.js?v=47"></script>
+  <script src="js/firebase-config.js?v=47"></script>
+  <script src="js/live.js?v=47"></script>
   <script>
   (() => {
     const $ = (s, r = document) => r.querySelector(s);
@@ -181,6 +181,7 @@
       // تعليقات المقالات التي ما زالت مفتوحة
       const days = typeof SITE !== "undefined" && SITE.commentDays != null && SITE.commentDays !== "" ? +SITE.commentDays : 2;
       const openArts = (typeof ARTICLES !== "undefined" ? ARTICLES : []).filter((a) => Date.now() <= new Date(a.date + "T23:59:59").getTime() + days * 864e5);
+      if (typeof FAHIMT !== "undefined" && FAHIMT && (FAHIMT.items || []).length) openArts.push({ id: "fahimt-" + (FAHIMT.id || "1"), title: "فهمت شنو؟ — النادي التراثي" });
       const artData = {};
       const paintArts = () => {
         const rows = Object.values(artData).filter((x) => x.list.length);
