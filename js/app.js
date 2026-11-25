@@ -1041,10 +1041,6 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
       <section class="section wrap">
         ${secHead("من أمثالنا")}
         <div class="grid g3">${PROVERBS.map((p) => `<div class="panel proverb reveal"><div class="p">«${esc(p.p)}»</div><p>${esc(p.m)}</p></div>`).join("")}</div>
-      </section>
-      <section class="section wrap">
-        ${secHead("مفردات من لهجتنا")}
-        <div class="grid g4">${WORDS_SD.map((w) => `<div class="panel word reveal"><b>${esc(w.w)}</b><span>${esc(w.m)}</span></div>`).join("")}</div>
       </section>`,
   };
 
