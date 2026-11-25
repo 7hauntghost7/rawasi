@@ -19,6 +19,67 @@
     const m = (e && e.message) || "";
     return /permission|insufficient/i.test(m) ? "تعذّر الإرسال — ربما انتهت المناظرة" : m || "تعذّر الاتصال";
   };
+  /* ---------- فلتر التعليقات: يُفحص كل تعليق واسم قبل إرساله ----------
+     الكلمات تُطبَّع (حذف التشكيل والتطويل وتوحيد الألف والياء والتاء المربوطة
+     وضغط الحروف المكررة) ثم تُقارن بالكلمات كاملة، مع السوابق واللواحق الشائعة.
+     وقائمة إضافية يحررها المشرف من لوحة التحكم: BLOCK_WORDS في data.js. */
+  const FILTER = (() => {
+    const norm = (s) => String(s || "").toLowerCase()
+      .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g, "")
+      .replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/ؤ/g, "و").replace(/ئ/g, "ي")
+      .replace(/(.)\1+/g, "$1");
+    // كلمات قوية وشتائم وألفاظ نابية
+    const BASE = [
+      "شرموط", "شرموطه", "شراميط", "منيوك", "منيوكه", "منايك", "منيك", "متناك", "نيك", "ينيك", "انيك", "نيكه",
+      "قحبه", "قحاب", "عاهر", "عاهره", "عرص", "معرص", "ديوث", "لوطي", "زب", "زبي", "كس", "كسم", "كسمك", "كسختك",
+      "طيز", "طيزك", "خرا", "خره", "تفو", "يلعن", "ابن الكلب", "بنت الكلب", "ابن الحرام", "بنت الحرام", "ولد الحرام",
+      "ابن الشرموطه", "يا كلب", "يا حمار", "يا حيوان", "يا بهيم", "يا غبي", "يا غبيه",
+      "حقير", "حقيره", "تافه", "تافهه", "وسخ", "وسخه", "زباله", "قذر", "قذره", "بهيم", "غبي", "غبيه", "حمار", "حماره", "كلب", "كلبه", "اهبل", "هبله",
+      "fuck", "fucking", "fucker", "motherfucker", "shit", "bitch", "bitches", "asshole", "bastard", "cunt", "dick", "pussy",
+      "whore", "slut", "nigga", "nigger", "kos", "kosomak", "a7a", "sharmoot", "sharmoota", "manyak", "metnak", "3ars",
+    ];
+    const STEMS = ["fuck", "shit", "bitch", "motherf", "sharmoot", "metnak", "شرموط", "منيوك", "متناك"]; // تكفي بداية الكلمة
+    const PRE = ["", "و", "ف", "ب", "ل", "ال", "وال", "بال", "فال", "لل", "يا", "ويا"];
+    const SUF = ["", "ك", "كم", "كي", "ين", "ات", "ي", "وا", "ها", "هم"];
+    const extra = () => (typeof BLOCK_WORDS !== "undefined" && Array.isArray(BLOCK_WORDS) ? BLOCK_WORDS : []);
+    function hit(text) {
+      const t = norm(text);
+      const tokens = t.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+      const flat = " " + tokens.join(" ") + " ";
+      const compact = tokens.join("");
+      const words = [...BASE, ...extra()].map(norm).map((w) => w.trim()).filter(Boolean);
+      for (const w of words) {
+        if (w.includes(" ")) { if (flat.includes(" " + w + " ")) return true; continue; }
+        const short = [...w].length <= 3;
+        for (const tok of tokens) {
+          if (tok === w) return true;
+          for (const p of short ? ["", "و", "يا", "ويا"] : PRE) {
+            if (!tok.startsWith(p)) continue;
+            const rest = tok.slice(p.length);
+            if (rest === w) return true;
+            if (!short && SUF.some((s) => s && rest === w + s)) return true;
+          }
+        }
+        if ([...w].length >= 5 && compact.includes(w)) return true; // ش.ر.م.و.ط
+      }
+      for (const st of STEMS.map(norm)) if (tokens.some((tok) => tok.startsWith(st))) return true;
+      return false;
+    }
+    const LINK = /(https?:\/\/|www\.|\b[\w-]+\.(com|net|org|xyz|info|link|ly|me|io|app|site|online)\b|wa\.me|t\.me)/i;
+    const PHONE = /(?:[+٠-٩0-9][\s-]?){9,}/;
+    return {
+      check(name, text) {
+        if (hit(name)) return "الاسم غير مناسب، اكتب اسمًا آخر.";
+        if (LINK.test(text)) return "الروابط غير مسموحة في التعليقات.";
+        if (PHONE.test(text)) return "لا تكتب أرقام هواتف في التعليقات حفاظًا على خصوصيتك.";
+        if (hit(text)) return "تعليقك يحتوي على كلمة غير لائقة. عدّله وحاول مرة أخرى 🌿";
+        return "";
+      },
+      name: (n) => (hit(n) ? "الاسم غير مناسب، اكتب اسمًا آخر." : ""),
+    };
+  })();
+  window.RAWASI_FILTER = FILTER;
+
   const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 
   LIVE.ready.then((be) => {
@@ -71,6 +132,8 @@
       const name = (nameEl ? nameEl.value : store.get("cname", "")).trim(), text = textEl.value.trim();
       if (!name) { toast("اكتب اسمك أولًا"); if (nameEl) nameEl.focus(); return; }
       if (!text) { textEl.focus(); return; }
+      const bad = FILTER.check(name, text);
+      if (bad) { toast(bad); textEl.focus(); return; }
       sending = true;
       const btn = box.querySelector(".send");
       btn.disabled = true;
@@ -340,6 +403,8 @@
       const text = textEl.value.trim();
       if (!name) { toast("اكتب اسمك أولًا"); if (nameEl) nameEl.focus(); return; }
       if (!text) { textEl.focus(); return; }
+      const bad = FILTER.check(name, text);
+      if (bad) { toast(bad); textEl.focus(); return; }
       sending = true;
       const btn = $(".chat-form .send");
       btn.disabled = true;

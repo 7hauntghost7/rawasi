@@ -372,6 +372,8 @@
       $("#cw-sub").addEventListener("submit", async (e) => {
         e.preventDefault();
         const name = $("#cw-nick").value.trim();
+        const badName = window.RAWASI_FILTER ? window.RAWASI_FILTER.name(name) : "";
+        if (badName) { toast(badName); return; }
         if (!name) return $("#cw-nick").focus();
         try {
           await lb.submitScore(bid, { name, ms: st.done - st.t0, hints: st.hints });
