@@ -873,11 +873,12 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
         ${HAKIM.img ? `<img src="${esc(HAKIM.img)}" alt="" loading="lazy">` : ""}
         <div><small>سلسلة «كلمة قصاد كلمة»</small><h2>${esc(HAKIM.title)}</h2><p>${esc(HAKIM.subtitle || "")}</p></div>
       </div>
-      <div class="hk-list">${HAKIM.words.map((r) => { const [sd, ar, en] = String(r).split("|").map((v) => (v || "").trim()); return { sd, ar, en }; }).filter((w) => w.sd).map((w) => `<div class="hk-row reveal">
+      <p class="meta hk-hint">اضغط على الكلمة لتعرف معناها بالمصطلح الطبي.</p>
+      <div class="hk-list">${HAKIM.words.map((r) => { const [sd, ar, en] = String(r).split("|").map((v) => (v || "").trim()); return { sd, ar, en }; }).filter((w) => w.sd).map((w) => `<button type="button" class="hk-row reveal" aria-expanded="false">
         <b>${esc(w.sd)}</b>
-        <span class="hk-ar">${esc(w.ar || "")}</span>
-        <span class="hk-en" dir="ltr" lang="en">${esc(w.en)}</span>
-      </div>`).join("")}</div>
+        <span class="hk-q">ما معناها؟</span>
+        <span class="hk-ans"><span class="hk-ar">${esc(w.ar || "")}</span><span class="hk-en" dir="ltr" lang="en">${esc(w.en)}</span></span>
+      </button>`).join("")}</div>
     </section>`;
   }
   function fahimtSec() {
@@ -916,6 +917,8 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
     </section>`;
   }
   document.addEventListener("click", (e) => {
+    const hk = e.target.closest(".hk-row");
+    if (hk) { const on = hk.classList.toggle("on"); hk.setAttribute("aria-expanded", on); return; }
     const b = e.target.closest("[data-rz]");
     if (!b) return;
     $$("[data-rz]").forEach((x) => x.classList.toggle("on", x === b));
