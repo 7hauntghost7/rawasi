@@ -899,21 +899,32 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
   }
   function ruznamaSec() {
     if (!has("RUZNAMA") || !(RUZNAMA.seasons || []).length) return "";
-    const pane = (se, i) => `<div class="rz-pane" data-rzp="${i}" ${i ? "hidden" : ""}>
-      ${se.intro ? `<p class="rz-intro">${esc(se.intro)}</p>` : ""}
-      <ol class="rz-list">${(se.items || []).map((x) => `<li>
-        <div class="rz-h"><b>${esc(x.name)}</b>${x.when ? `<span>${esc(x.when)}</span>` : ""}</div>
-        <p>${esc(x.text)}</p>
-      </li>`).join("")}</ol>
-      ${se.note ? `<p class="rz-note">${esc(se.note)}</p>` : ""}
-    </div>`;
+    const AR = (n) => String(n).replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
+    const ICON = {
+      "الشتاء": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M12 2l-2.5 2.5M12 2l2.5 2.5M12 22l-2.5-2.5M12 22l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+      "الخريف": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15a4.5 4.5 0 0 1-.5-9A5.5 5.5 0 0 1 17 7.5 3.75 3.75 0 0 1 17 15z" fill="currentColor"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    };
+    const pane = (se, i) => {
+      const items = se.items || [];
+      return `<div class="rz-pane" data-rzp="${i}" data-season="${i}" ${i ? "hidden" : ""}>
+        ${se.intro ? `<p class="rz-intro">${esc(se.intro)}</p>` : ""}
+        <div class="rz-leaves">${items.map((x, j) => `<article class="rz-leaf">
+          <div class="rz-top"><i></i><i></i><span>${esc(se.name)}</span></div>
+          <div class="rz-in">
+            <small>${AR(j + 1)} من ${AR(items.length)}</small>
+            <h3>${esc(x.name)}</h3>
+            ${x.when ? `<span class="rz-when">${esc(x.when)}</span>` : ""}
+            <p>${esc(x.text)}</p>
+          </div>
+        </article>`).join("")}</div>
+        ${se.note ? `<p class="rz-note">${esc(se.note)}</p>` : ""}
+      </div>`;
+    };
     return `<section class="section wrap" id="ruznama">
-      <div class="rz reveal">
-        <div class="rz-head"><small>${esc(RUZNAMA.intro || "")}</small><h2>${esc(RUZNAMA.title)}</h2>
-          <div class="rz-tabs">${RUZNAMA.seasons.map((se, i) => `<button type="button" class="${i ? "" : "on"}" data-rz="${i}">${esc(se.label || se.name)}</button>`).join("")}</div>
-        </div>
-        ${RUZNAMA.seasons.map(pane).join("")}
-      </div>
+      ${secHead(RUZNAMA.title)}
+      <p class="meta" style="margin-top:-8px">${esc(RUZNAMA.intro || "")}. اسحب لتقلّب صفحات الرزنامة.</p>
+      <div class="rz-tabs">${RUZNAMA.seasons.map((se, i) => `<button type="button" class="${i ? "" : "on"}" data-rz="${i}" data-season="${i}">${ICON[se.name] || ""}${esc(se.label || se.name)}</button>`).join("")}</div>
+      ${RUZNAMA.seasons.map(pane).join("")}
     </section>`;
   }
   document.addEventListener("click", (e) => {
