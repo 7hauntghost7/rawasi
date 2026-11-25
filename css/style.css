@@ -448,8 +448,9 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 
 .toast {
   position: fixed; bottom: calc(var(--tabbar) + 16px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; z-index: 200;
-  background: var(--deep); color: var(--gold); padding: 10px 20px; border-radius: 999px; font-size: 14px;
-  transition: transform .25s, opacity .25s; pointer-events: none; white-space: nowrap;
+  background: var(--deep); color: var(--gold); padding: 10px 20px; border-radius: 22px; font-size: 14px; line-height: 1.6;
+  width: max-content; max-width: min(460px, calc(100vw - 32px)); text-align: center;
+  transition: transform .25s, opacity .25s; pointer-events: none;
 }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 @media (min-width: 900px) { .toast { bottom: 24px; } }

@@ -32,7 +32,7 @@
     toastEl.textContent = msg;
     toastEl.classList.add("show");
     clearTimeout(toastT);
-    toastT = setTimeout(() => toastEl.classList.remove("show"), 2400);
+    toastT = setTimeout(() => toastEl.classList.remove("show"), Math.max(2400, String(msg).length * 65));
   }
   function confetti(n = 70) {
     const colors = ["#e9ab11", "#ffcc5e", "#b54a2a", "#7e331c", "#e4cc85", "#2d6a6a"];
