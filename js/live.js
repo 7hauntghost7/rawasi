@@ -83,6 +83,24 @@
         warn),
       addToThread: (tid, c) => addDoc(collection(db, "threads", tid, "comments"), { name: c.name, text: c.text, device, ts: serverTimestamp(), hidden: false }),
       hideInThread: (tid, cid, hidden) => updateDoc(doc(db, "threads", tid, "comments", cid), { hidden }),
+      // حظر الأجهزة: الحظر محفوظ في bans/{device} وقواعد Firestore ترفض تعليقات الجهاز المحظور
+      async amBanned() { try { return (await getDoc(doc(db, "bans", device))).exists(); } catch { return false; } },
+      ban: (dev, info) => setDoc(doc(db, "bans", dev), { name: String(info.name || "").slice(0, 30), text: String(info.text || "").slice(0, 500), ts: serverTimestamp() }),
+      unban: (dev) => deleteDoc(doc(db, "bans", dev)),
+      watchBans: (cb) => onSnapshot(collection(db, "bans"), (s) => cb(s.docs.map((d) => ({ device: d.id, ...d.data() }))), warn),
+      // حذف كل التعليقات (للمشرف): تعليقات كل المناظرات + صناديق التعليق المعروفة
+      async purgeComments(tids) {
+        const refs = [];
+        const debs = await fs.getDocs(collection(db, "debates"));
+        for (const d of debs.docs) (await fs.getDocs(collection(db, "debates", d.id, "comments"))).forEach((c) => refs.push(c.ref));
+        for (const tid of tids) (await fs.getDocs(collection(db, "threads", tid, "comments"))).forEach((c) => refs.push(c.ref));
+        for (let i = 0; i < refs.length; i += 400) {
+          const b = fs.writeBatch(db);
+          refs.slice(i, i + 400).forEach((r) => b.delete(r));
+          await b.commit();
+        }
+        return refs.length;
+      },
       // سؤال الدفعة: صوت واحد لكل جهاز يمكن تغييره
       watchPoll: (pid, n, cb) => onSnapshot(doc(db, "polls", pid), (s) => {
         const d = s.exists() ? s.data() : {};
@@ -171,6 +189,11 @@
       },
       async addToThread(tid, c) { await post("/api/thread/comment", { tid, device, ...c }); if (watchThread.pull) watchThread.pull(); },
       hideInThread: (tid, cid, hidden) => post("/api/thread/hide", { pass, tid, cid, hidden }),
+      async purgeComments() { throw new Error("الحذف الجماعي متاح مع Firebase فقط"); },
+      async amBanned() { return false; },
+      async ban() { throw new Error("الحظر متاح مع Firebase فقط"); },
+      async unban() { throw new Error("الحظر متاح مع Firebase فقط"); },
+      watchBans(cb) { const t = setTimeout(() => cb([]), 0); return () => clearTimeout(t); },
       watchPoll(pid, n, cb) {
         const pull = async () => { try { cb((await (await fetch(`/api/poll?pid=${pid}&t=${Date.now()}`)).json()).counts.slice(0, n)); } catch { /* */ } };
         pull(); watchPoll.pull = pull;

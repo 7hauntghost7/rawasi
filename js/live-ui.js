@@ -134,6 +134,7 @@
       if (!text) { textEl.focus(); return; }
       const bad = FILTER.check(name, text);
       if (bad) { toast(bad); textEl.focus(); return; }
+      if (be.amBanned && await be.amBanned()) { toast("تم إيقاف التعليق من هذا الجهاز بسبب مخالفة قواعد التعليق."); return; }
       sending = true;
       const btn = box.querySelector(".send");
       btn.disabled = true;
@@ -405,6 +406,7 @@
       if (!text) { textEl.focus(); return; }
       const bad = FILTER.check(name, text);
       if (bad) { toast(bad); textEl.focus(); return; }
+      if (be.amBanned && await be.amBanned()) { toast("تم إيقاف التعليق من هذا الجهاز بسبب مخالفة قواعد التعليق."); return; }
       sending = true;
       const btn = $(".chat-form .send");
       btn.disabled = true;

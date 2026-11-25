@@ -374,6 +374,7 @@
         const name = $("#cw-nick").value.trim();
         const badName = window.RAWASI_FILTER ? window.RAWASI_FILTER.name(name) : "";
         if (badName) { toast(badName); return; }
+        if (lb.amBanned && await lb.amBanned()) { toast("تم إيقاف التعليق من هذا الجهاز بسبب مخالفة قواعد التعليق."); return; }
         if (!name) return $("#cw-nick").focus();
         try {
           await lb.submitScore(bid, { name, ms: st.done - st.t0, hints: st.hints });

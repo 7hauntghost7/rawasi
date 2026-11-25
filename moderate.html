@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/img/brand/logo-ar-gold.png">
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=58">
+  <link rel="stylesheet" href="css/style.css?v=59">
   <style>
     body { padding-bottom: 40px; }
     .top { position: sticky; top: 0; z-index: 10; background: rgba(250, 246, 238, .92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
@@ -34,6 +34,9 @@
     .cm { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
     .cm:last-child { border-bottom: 0; }
     .cm .tx { flex: 1; min-width: 0; }
+    .cm .acts { display: flex; flex-direction: column; gap: 6px; align-items: stretch; flex-shrink: 0; }
+    .cm .ban { color: var(--rust) !important; border-color: var(--rust) !important; }
+    .banned-tag { font-size: 12px; font-weight: 700; color: #fff; background: var(--rust); border-radius: 999px; padding: 3px 10px; text-align: center; }
     .cm .tx b { font-size: 13px; }
     .cm .tx small { color: var(--ink-soft); font-size: 11.5px; margin-inline-start: 6px; }
     .cm .tx p { margin: 2px 0 0; font-size: 14.5px; line-height: 1.7; word-break: break-word; }
@@ -58,9 +61,9 @@
   <main class="wrap mod" id="app"><div class="box msgbox">جارٍ الاتصال…</div></main>
   <div class="toast" id="toast"></div>
 
-  <script src="js/data.js?v=58"></script>
-  <script src="js/firebase-config.js?v=58"></script>
-  <script src="js/live.js?v=58"></script>
+  <script src="js/data.js?v=59"></script>
+  <script src="js/firebase-config.js?v=59"></script>
+  <script src="js/live.js?v=59"></script>
   <script>
   (() => {
     const $ = (s, r = document) => r.querySelector(s);
@@ -135,6 +138,13 @@
         <div class="box"><h3 id="ch">💬 التعليقات</h3><div id="cms"></div></div>
         <div class="box" id="th-mod"><h3 id="thh">⭐ تعليقات شخصية العدد</h3><div id="ths"></div></div>
         <div class="box" id="art-mod"><h3>📝 تعليقات المقالات المفتوحة</h3><div id="arts"><p class="meta">لا توجد مقالات تعليقاتها مفتوحة الآن.</p></div></div>
+        <div class="box"><h3 id="banh">🚫 الأجهزة المحظورة</h3><p class="meta">الجهاز المحظور لا يستطيع التعليق في أي مكان في الموقع. يمكن تجاوز الحظر بمسح بيانات المتصفح، لكنه يوقف أغلب المخالفين.</p><div id="bans"></div></div>
+        <div class="box" id="purge-box" style="border:2px solid var(--rust)">
+          <h3 style="color:var(--rust)">🗑️ حذف كل التعليقات</h3>
+          <p class="meta">يحذف نهائيًا كل التعليقات في الموقع: المناظرات (الحالية والسابقة)، والمقالات، وشخصية العدد، و«فهمت شنو؟». لا يمس الأصوات ولا سؤال الدفعة ولا لوحة الشرف. <b>لا يمكن التراجع عنه.</b></p>
+          <button class="btn red big" id="purge">حذف كل التعليقات</button>
+          <p class="meta" id="purge-msg"></p>
+        </div>
         <p class="mode">${be.mode === "firebase" ? "متصل بـ Firebase" : "وضع الشبكة المحلية"} · <a href="#" id="out" style="color:var(--rust)">خروج</a></p>`;
 
       const paintState = () => {
@@ -158,25 +168,43 @@
               <button class="btn ghost big" data-clear>إزالة المناظرة من الموقع</button>`}
           </div>`;
       };
+      // الأجهزة المحظورة
+      let bans = [];
+      const banned = (dev) => bans.some((b) => b.device === dev);
+      const banBtn = (c, extra) => !c.device ? "" : banned(c.device)
+        ? `<span class="banned-tag">محظور</span>`
+        : `<button class="ban" data-ban="${esc(c.device)}" data-cid="${esc(c.id)}" data-name="${esc(c.name)}" data-text="${esc(c.text)}" ${extra}>حظر الجهاز</button>`;
+      const repaintAll = () => { paintComments(); if (window.__repaintThreads) window.__repaintThreads(); };
+      be.watchBans((list) => {
+        bans = list || [];
+        $("#banh").textContent = `🚫 الأجهزة المحظورة (${bans.length})`;
+        $("#bans").innerHTML = bans.length ? bans.map((b) => `<div class="cm">
+            <div class="tx"><b>${esc(b.name || "—")}</b><p>${esc(b.text || "")}</p></div>
+            <div class="acts"><button data-unban="${esc(b.device)}">إلغاء الحظر</button></div>
+          </div>`).join("") : `<p class="meta">لا توجد أجهزة محظورة.</p>`;
+        repaintAll();
+      });
       const paintComments = () => {
         $("#ch").textContent = `💬 التعليقات (${comments.length})`;
         $("#cms").innerHTML = comments.length ? [...comments].reverse().map((c) => `
           <div class="cm ${c.hidden ? "off" : ""}">
             <div class="tx"><b>${esc(c.name)}</b><small>${c.side ? esc(c.side === "a" ? cur.sideA : cur.sideB) : ""}</small><p>${esc(c.text)}</p></div>
-            <button data-hide="${esc(c.id)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>
+            <div class="acts"><button data-hide="${esc(c.id)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>${banBtn(c, `data-kind="d"`)}</div>
           </div>`).join("") : `<p class="meta">لا توجد تعليقات بعد.</p>`;
       };
 
       const tid = typeof PERSONA !== "undefined" && PERSONA ? "persona-" + PERSONA.issue : "";
-      if (tid && be.watchThread) be.watchThread(tid, (list) => {
-        list = list || [];
+      let personaList = [];
+      const paintPersona = () => {
+        const list = personaList;
         $("#thh").textContent = `⭐ تعليقات شخصية العدد${PERSONA.name ? " — " + PERSONA.name : ""} (${list.length})`;
         $("#ths").innerHTML = list.length ? [...list].reverse().map((c) => `
           <div class="cm ${c.hidden ? "off" : ""}">
             <div class="tx"><b>${esc(c.name)}</b><p>${esc(c.text)}</p></div>
-            <button data-thide="${esc(c.id)}" data-tid="${esc(tid)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>
+            <div class="acts"><button data-thide="${esc(c.id)}" data-tid="${esc(tid)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>${banBtn(c, `data-kind="t" data-tid="${esc(tid)}"`)}</div>
           </div>`).join("") : `<p class="meta">لا توجد تعليقات بعد.</p>`;
-      });
+      };
+      if (tid && be.watchThread) be.watchThread(tid, (list) => { personaList = list || []; paintPersona(); });
       else $("#th-mod").hidden = true;
       // تعليقات المقالات التي ما زالت مفتوحة
       const days = typeof SITE !== "undefined" && SITE.commentDays != null && SITE.commentDays !== "" ? +SITE.commentDays : 2;
@@ -188,10 +216,11 @@
         $("#arts").innerHTML = rows.length ? rows.map(({ a, list }) => `<p style="margin:10px 0 2px;font-weight:600">«${esc(a.title)}»</p>` + [...list].reverse().map((c) => `
           <div class="cm ${c.hidden ? "off" : ""}">
             <div class="tx"><b>${esc(c.name)}</b><p>${esc(c.text)}</p></div>
-            <button data-thide="${esc(c.id)}" data-tid="art-${esc(a.id)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>
+            <div class="acts"><button data-thide="${esc(c.id)}" data-tid="art-${esc(a.id)}" data-v="${c.hidden ? 0 : 1}">${c.hidden ? "إظهار" : "إخفاء"}</button>${banBtn(c, `data-kind="t" data-tid="art-${esc(a.id)}"`)}</div>
           </div>`).join("")).join("") : `<p class="meta">${openArts.length ? `${openArts.length} مقال مفتوح للتعليق، ولا توجد تعليقات بعد.` : "لا توجد مقالات تعليقاتها مفتوحة الآن."}</p>`;
       };
       if (be.watchThread) openArts.forEach((a) => be.watchThread("art-" + a.id, (list) => { artData[a.id] = { a, list: list || [] }; paintArts(); }));
+      window.__repaintThreads = () => { if (tid) paintPersona(); paintArts(); };
       paintArts();
       be.watchDebate((d) => {
         const changed = !cur || !d || cur.id !== d.id;
@@ -220,6 +249,37 @@
         if (e.target.closest("[data-clear]")) {
           if (!confirm("إزالة المناظرة من صفحة الزوار؟ تعود صفحة المناظرات إلى شكلها العادي.")) return;
           try { await be.clear(); toast("أُزيلت المناظرة"); } catch (er) { toast(nice(er)); }
+          return;
+        }
+        const bn = e.target.closest("[data-ban]");
+        if (bn) {
+          if (!confirm(`حظر جهاز «${bn.dataset.name}» من التعليق في كل الموقع؟ سيُخفى هذا التعليق أيضًا.`)) return;
+          try {
+            await be.ban(bn.dataset.ban, { name: bn.dataset.name, text: bn.dataset.text });
+            if (bn.dataset.kind === "d" && cur) await be.hide(cur.id, bn.dataset.cid, true);
+            else if (bn.dataset.kind === "t") await be.hideInThread(bn.dataset.tid, bn.dataset.cid, true);
+            toast("تم حظر الجهاز");
+          } catch (er) { toast(nice(er)); }
+          return;
+        }
+        const ub = e.target.closest("[data-unban]");
+        if (ub) {
+          if (!confirm("إلغاء حظر هذا الجهاز؟")) return;
+          try { await be.unban(ub.dataset.unban); toast("أُلغي الحظر"); } catch (er) { toast(nice(er)); }
+          return;
+        }
+        if (e.target.closest("#purge")) {
+          const word = prompt("هذا سيحذف كل التعليقات نهائيًا ولا يمكن التراجع.\nللتأكيد اكتب: احذف");
+          if ((word || "").trim() !== "احذف") { toast("أُلغي الحذف"); return; }
+          const btn = $("#purge"), msg = $("#purge-msg");
+          btn.disabled = true; msg.textContent = "جارٍ الحذف…";
+          const tids = [];
+          if (typeof PERSONA !== "undefined" && PERSONA && PERSONA.issue) for (let i = 1; i <= +PERSONA.issue; i++) tids.push("persona-" + i);
+          (typeof ARTICLES !== "undefined" ? ARTICLES : []).forEach((x) => tids.push("art-" + x.id));
+          if (typeof FAHIMT !== "undefined" && FAHIMT) tids.push("art-fahimt-" + (FAHIMT.id || "1"));
+          try { const n = await be.purgeComments(tids); msg.textContent = `✔ حُذف ${n} تعليقًا.`; toast(`حُذف ${n} تعليقًا`); }
+          catch (er) { msg.textContent = ""; toast(nice(er)); }
+          btn.disabled = false;
           return;
         }
         const th = e.target.closest("[data-thide]");
