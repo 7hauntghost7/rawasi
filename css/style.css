@@ -1017,3 +1017,6 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
   .rz-leaves { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); overflow: visible; margin: 0; padding: 0; }
   .rz-leaf { max-width: none; }
 }
+.hk-poster { margin: 0 auto 10px; max-width: 520px; }
+.hk-poster figcaption { font-size: 13px; font-weight: 600; color: var(--rust); margin-bottom: 8px; }
+.hk-poster img { width: 100%; height: auto; display: block; border-radius: 22px; box-shadow: 0 10px 28px rgba(46, 17, 9, .16); }

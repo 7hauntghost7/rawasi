@@ -869,10 +869,9 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
   function hakimSec() {
     if (!has("HAKIM") || !(HAKIM.words || []).length) return "";
     return `<section class="section wrap" id="hakim">
-      <div class="hk-top reveal">
-        ${HAKIM.img ? `<img src="${esc(HAKIM.img)}" alt="" loading="lazy">` : ""}
-        <div><small>سلسلة «كلمة قصاد كلمة»</small><h2>${esc(HAKIM.title)}</h2><p>${esc(HAKIM.subtitle || "")}</p></div>
-      </div>
+      ${HAKIM.img
+        ? `<figure class="hk-poster reveal"><figcaption>سلسلة «كلمة قصاد كلمة»</figcaption><img src="${esc(HAKIM.img)}" alt="${esc(HAKIM.title)} — ${esc(HAKIM.subtitle || "")}" loading="lazy"></figure>`
+        : `<div class="hk-top reveal"><div><small>سلسلة «كلمة قصاد كلمة»</small><h2>${esc(HAKIM.title)}</h2><p>${esc(HAKIM.subtitle || "")}</p></div></div>`}
       <p class="meta hk-hint">اضغط على الكلمة لتعرف معناها بالمصطلح الطبي.</p>
       <div class="hk-list">${HAKIM.words.map((r) => { const [sd, ar, en] = String(r).split("|").map((v) => (v || "").trim()); return { sd, ar, en }; }).filter((w) => w.sd).map((w) => `<button type="button" class="hk-row reveal" aria-expanded="false">
         <b>${esc(w.sd)}</b>
