@@ -1021,3 +1021,18 @@ footer .copy { border-top: 1px solid rgba(233, 171, 17, .2); margin-top: 18px; p
 .hk-poster { margin: 0 auto 10px; max-width: 520px; }
 .hk-poster figcaption { font-size: 13px; font-weight: 600; color: var(--rust); margin-bottom: 8px; }
 .hk-poster img { width: 100%; height: auto; display: block; border-radius: 22px; box-shadow: 0 10px 28px rgba(46, 17, 9, .16); }
+
+/* ---------- ألعاب من صنع الأصدقاء ---------- */
+.fg { display: flex; gap: 16px; align-items: center; color: var(--paper); text-decoration: none; border-radius: var(--radius); padding: 20px 18px; margin-bottom: 8px; background: radial-gradient(ellipse at 15% 20%, rgba(233, 171, 17, .28), transparent 55%), linear-gradient(150deg, #1d2b3a, var(--deep)); box-shadow: 0 12px 30px rgba(46, 17, 9, .2); }
+.fg-art { flex-shrink: 0; width: 84px; height: 112px; display: grid; place-items: center; color: var(--gold); border-radius: 14px; background: rgba(255, 255, 255, .06); }
+.fg-art svg { width: 62px; height: 62px; }
+.fg-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.fg-tx small { font-size: 12.5px; font-weight: 600; color: var(--gold); }
+.fg-tx h2 { margin: 0; font-size: 38px; line-height: 1.2; color: #fff; }
+.fg-tag { margin: 0; font-size: 15px; font-weight: 600; color: var(--sand); }
+.fg-tx p:not(.fg-tag) { margin: 4px 0 0; font-size: 14px; line-height: 1.7; opacity: .88; }
+.fg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fg-chips span { font-size: 12px; font-weight: 600; border: 1px solid rgba(255, 204, 94, .45); color: var(--gold); border-radius: 999px; padding: 3px 10px; }
+.fg-go { margin-top: 10px; }
+.fg:active { transform: scale(.99); }
+@media (max-width: 420px) { .fg { flex-direction: column; align-items: flex-start; } .fg-art { width: 64px; height: 84px; } .fg-art svg { width: 46px; height: 46px; } }

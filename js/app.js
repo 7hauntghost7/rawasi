@@ -1031,6 +1031,7 @@ ${fwUrl(i)}`)}" target="_blank" rel="noopener">واتساب</a>
       ${hakimSec()}
       ${ruznamaSec()}
       ${fahimtSec()}
+      ${friendGames("")}
       <section class="section wrap reveal">
         ${secHead("رحلتي إلى…")}
         <div class="panel"><div class="trips">${TRIPS.map((t, i) => `<div class="trip ${t.done ? "done" : ""}" ${t.done && t.article ? `data-read="${t.article}" tabindex="0"` : ""}>
@@ -1241,8 +1242,27 @@ ${url}`);
     }
   }
 
+  const DOOR = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="16" y="6" width="32" height="52" rx="3" fill="none" stroke="currentColor" stroke-width="3"/><path d="M16 58h32" stroke="currentColor" stroke-width="3"/><path d="M22 12h20v40H22z" fill="currentColor" opacity=".18"/><circle cx="38" cy="33" r="2.6" fill="currentColor"/></svg>';
+  function friendGames(pad = "padding-bottom:0") {
+    const list = (has("FRIEND_GAMES") ? FRIEND_GAMES : []).filter((g) => /^https:\/\//.test(g.url || ""));
+    if (!list.length) return "";
+    return `<section class="section wrap" style="${pad}">
+      ${list.map((g) => `<a class="fg reveal" href="${esc(g.url)}" target="_blank" rel="noopener">
+        <div class="fg-art">${DOOR}</div>
+        <div class="fg-tx">
+          <small>${g.by ? `لعبة من صنع ${esc(g.by)}` : "لعبة من صنع أصدقائنا"}</small>
+          <h2>${esc(g.name)}</h2>
+          ${g.tagline ? `<p class="fg-tag">${esc(g.tagline)}</p>` : ""}
+          ${g.about ? `<p>${esc(g.about)}</p>` : ""}
+          ${(g.tags || []).length ? `<div class="fg-chips">${g.tags.map((x) => `<span>${esc(x)}</span>`).join("")}</div>` : ""}
+          <span class="btn gold fg-go">العب الآن ↗</span>
+        </div>
+      </a>`).join("")}
+    </section>`;
+  }
   function gamesPage() {
     return `${hero({ name: "ركن الألعاب", color: "#1f5a5a", motto: "العب، وتعلّم، ونافس زملاءك", about: "ألعاب خفيفة من وحي النوادي: من الشعر إلى التشريح إلى تراث السودان. نتائجك تُحفظ على جهازك." }, "games")}
+      ${friendGames()}
       <section class="section wrap">
         <div class="game-menu" id="game-menu"></div>
         <div class="stage" id="stage"></div>
